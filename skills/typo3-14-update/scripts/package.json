@@ -12,13 +12,14 @@
   },
   "scripts": {
     "t3u": "node t3u.mjs",
-    "test": "node --test tests/unit/*.test.mjs",
-    "test:coverage": "node --test --experimental-test-coverage tests/unit/*.test.mjs"
+    "test": "node --test tests/unit/*.test.mjs tests/e2e/*.test.mjs",
+    "test:coverage": "node --test --experimental-test-coverage tests/unit/*.test.mjs",
+    "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:e2e": "node --test tests/e2e/*.test.mjs"
   },
   "dependencies": {
     "chrome-launcher": "^1.1.0",
     "lighthouse": "^13.3.0",
-    "linkedom": "^0.18.5",
     "odiff-bin": "^4.3.8",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.60.0",
@@ -30,6 +31,7 @@
     "commander": "replaced by node:util parseArgs",
     "dotenv": "implicit .env loading from the skill directory leaked credentials across projects",
     "fs-extra": "node:fs/promises covers mkdir recursive, rm and cp",
-    "@playwright/test": "the test runner was unused; node:test covers the tests"
+    "@playwright/test": "the test runner was unused; node:test covers the tests",
+    "linkedom": "not needed: DOM normalisation and template signatures are dependency-free so the harness works before npm ci"
   }
 }

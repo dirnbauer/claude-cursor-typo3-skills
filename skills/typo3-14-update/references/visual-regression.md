@@ -1,142 +1,177 @@
 # Visual regression harness
 
-**Current state, stated plainly.** The harness is mid-migration from v1 (`run-tests.cjs`,
-`backend-module-sweep.cjs`) to v2 (`lib/`, ESM, guarded). Read this before trusting a result.
-
-| Component | State |
-|---|---|
-| `lib/cli/exit-codes.mjs` | **v2** — the 0–5 contract |
-| `lib/net/url-guard.mjs` | **v2** — pinned-origin allow-listing, 22 unit tests |
-| `lib/net/safe-fetch.mjs` | **v2** — manual redirects, credentials dropped on origin change |
-| `lib/net/sitemap.mjs` | **v2** — bounded walker, entity-declaration refusal, 11 unit tests |
-| `lib/util/rng.mjs`, `lib/util/redact.mjs` | **v2** — seeded Fisher-Yates, redaction, untrusted containment |
-| `run-tests.cjs` | **v1 with the critical defects patched** — see below |
-| `backend-module-sweep.cjs` | **v1** — known defects listed below, not yet fixed |
-
-`npm ci && npm test` runs the v2 unit suite (53 tests).
-
-## What was fixed in v1 while v2 is built
-
-Three defects made the shipping harness silently pass, so they were patched in place rather than
-left waiting for the rewrite:
-
-1. **Exit codes.** `compare-screenshots`, `smoke-test` and `lighthouse-test` never exited non-zero.
-   A run with forty differing screenshots exited 0, so nothing could gate on it and "loop until
-   green" was unenforceable. Now: `0` pass, `1` findings, `2` harness error.
-2. **`BROKEN_PAGE_STRINGS`** was documented as having a "(built-in list)" default that did not
-   exist, so the smoke test detected nothing unless the caller knew to set it. A real default list
-   now ships.
-3. **After-only files** were invisible: comparison walked only the *before* directory, so a page
-   that started rendering *more* content was never reported. `onlyInAfter` is now a report field and
-   counts toward findings.
-
-Also changed: `minor` differences now count as findings. Under the zero-tolerance policy a
-percentage threshold measures area, not importance — a missing button hides comfortably inside "1%".
-
-## Known defects still in v1
-
-Do not rely on these being safe; they are why v2 exists.
-
-- `getSitemapTargets` hard-codes `https://` after stripping the caller's scheme, so an `http://`
-  DDEV project discovers zero URLs — and the fetch failure is downgraded to a warning, so
-  `get-urls` can "succeed" with only golden paths.
-- Sitemap recursion has no visited set, depth cap, document cap, size cap or origin check.
-- `GOLDEN_PATH_URLS` accepts absolute URLs without an origin check.
-- Browser args include `--no-sandbox`, `--disable-setuid-sandbox` and `--disable-web-security`.
-- `.env` and `.env.local` are auto-loaded from the **skill** directory, sharing credentials across
-  every project that uses the skill.
-- Sampling uses `sort(() => Math.random() - 0.5)` — unseeded and statistically biased.
-- Third-party requests are not blocked.
-- The smoke test clicks **random** links, which can reach logout, cache clearing, deletion,
-  unsubscribe, scheduler actions or large downloads.
-- `backend-module-sweep.cjs` interpolates the module identifier straight into a CSS selector, and
-  marks non-clickable entries `skipped` while failing only on `failed > 0` — so a run can look green
-  with modules unchecked.
-- Reports carry raw URLs, query parameters, page titles, console messages and stack traces with no
-  redaction.
-- No `package-lock.json` is committed, so a Playwright or odiff bump between the before and after
-  run can itself manufacture differences.
-
-Until v2 lands, treat a v1 green as *necessary but not sufficient*, and keep the environment
-completely still between the two captures.
-
-## v1 usage
+`scripts/t3u.mjs` — one entrypoint, subcommands, and exactly one place that decides the exit
+code. See [`harness-contract.md`](harness-contract.md) for the full contract.
 
 ```bash
 cd skills/typo3-14-update/scripts
 npm ci
+npm test        # 138 tests, no network, no DDEV, no browser required
 ```
 
-Run inside the DDEV web container so browsers, DNS and the site share one environment. In-container
-browsers come from the public `codingsasi/ddev-playwright` add-on:
+Run inside the DDEV web container so browsers, DNS and the site share one environment.
+In-container browsers come from the public `codingsasi/ddev-playwright` add-on:
 
 ```bash
 ddev add-on get codingsasi/ddev-playwright && ddev restart && ddev install-playwright
 ```
 
+## The order that matters
+
 ```bash
-node run-tests.cjs --action=get-urls --domain="https://site.ddev.site" --output="urls.txt"
-node run-tests.cjs --action=take-screenshots --url-file="urls.txt" --output="shots/before/"
-# ... update ...
-node run-tests.cjs --action=take-screenshots --url-file="urls.txt" --output="shots/after/"
-node run-tests.cjs --action=compare-screenshots --before-dir="shots/before/" --after-dir="shots/after/" \
-  --output-dir="shots/diff/" --json-output="visual-report.json"
-node run-tests.cjs --action=smoke-test --domain="https://site.ddev.site" --json-output="smoke.json"
-node run-tests.cjs --action=lighthouse-test --domain="https://site.ddev.site" --json-output="lh.json"
-node backend-module-sweep.cjs --base-url="https://site.ddev.site" --output="sweep.json"
+t3u init --base-url "https://acme.ddev.site" --languages de,en
+t3u env-fingerprint --write-baseline
+t3u content-fingerprint --write-baseline
+t3u discover-urls --seed "acme-2026"
+
+t3u selftest-determinism          # loop 000 — MUST reach zero before anything else
+t3u capture --label before
+t3u seal-baseline --id A-original # immutable from here
+
+# … the update …
+
+t3u capture --label after
+t3u compare-http && t3u compare-dom && t3u compare-visual
+t3u backend-sweep --base-url "https://acme.ddev.site"
+t3u gate --loop 300-invariance-closure
+t3u report --loop 300-invariance-closure
 ```
 
-`lighthouse-test` picks its own small sample (homepage plus three random pages) and does **not** read
-`--url-file`. For the full audit, loop Lighthouse over the persisted list yourself.
+`selftest-determinism` is not optional. Every `compare-*` command and `gate` refuse with
+exit 4 without a valid self-test lock, and with exit 3 if the lock's inputs have drifted.
 
-Backend credentials come from `BE_USER` / `BE_PASSWORD`. Use a dedicated local admin created for the
-test, never a reused production login, and never commit them.
+## Exit codes
 
-## Sampling and devices
+| Code | Meaning | What to do |
+|---|---|---|
+| 0 | pass | continue |
+| 1 | findings | **fix the site** |
+| 2 | harness error | **fix the harness** |
+| 3 | invalid | **stop** — fingerprint, baseline or manifest drift; the run cannot be judged |
+| 4 | precondition | satisfy it first |
+| 5 | blocked by policy | **investigate** — a security guard refused |
 
-- Discovery reads `/sitemap.xml` plus `/<lang>/sitemap.xml` for every entry in `LANGUAGE_LIST`
-  (default `en,de` — set it to the site's real prefixes). Validate the sitemaps first, or discovery
-  inherits their gaps.
-- `GOLDEN_PATH_URLS` adds must-test pages to every sample.
-- Defaults: 10 random URLs per sitemap (`RANDOM_URLS_PER_SITEMAP`), capped at 100 (`MAX_URLS`).
-- Matrix: Chromium at desktop 1920×1080, tablet 820×1180, phone 390×844, device scale factor 1,
-  full-page, after a 2 s stabilisation wait.
+3 and 5 are separate from 1 and 2 deliberately: a Chromium patch between captures is not a
+site regression, and a guard refusal is not a broken tool.
 
-Persist `urls.txt`. **The identical sample must run before and after** — that is the whole point.
+## Commands
 
-## Comparison
+| Command | Purpose |
+|---|---|
+| `init` | Create the run directory; validates the base URL on its own terms first |
+| `doctor` | Node version, dependencies, browser launch, sandbox state, guard check |
+| `env-fingerprint` / `content-fingerprint` | `--write-baseline` to seal, bare to assert |
+| `discover-urls` | Guarded sitemap walk → URL manifest with tiered coverage |
+| `capture --label <l>` | Stage 1 (HTTP), stage 2 (DOM), stage 3 (screenshots) |
+| `selftest-determinism` | Double-shoot the untouched site; require zero |
+| `seal-baseline` / `verify-baseline` | `SHA256SUMS` + `LOCK.json`; there is no unseal |
+| `compare-http` / `compare-dom` / `compare-visual` | The three stages |
+| `backend-sweep` | Every module opened; 100% coverage required |
+| `smoke` | Deterministic read-only navigation |
+| `lighthouse` | Manifest sample, median of N runs |
+| `gate` | Aggregate a loop verdict |
+| `report` | Generate `SUMMARY.md`, `FINDINGS.md`, `EVIDENCE.md` from the JSON |
 
-`odiff` by default with an automatic `pixelmatch` fallback; `VISUAL_COMPARE_ENGINE=pixelmatch`
-forces it. `VISUAL_THRESHOLD` (default `0.1`) is per-pixel colour sensitivity.
+## Coverage
 
-**Never raise a threshold or re-baseline to make a difference disappear** — see
-`rules/20-baseline-integrity.md`.
+Stage 1 and stage 2 cover **100% of discovered URLs, always**. If they cannot, the run is
+`INVALID` rather than "sampled".
+
+Stage 3 is tiered within a capture budget:
+
+- **Tier 1**, always: homepage per language, golden paths, 404, search, empty search, login,
+  password reset, forms — plus every URL a stage 1 or 2 finding touched.
+- **Tier 2**: two representatives per template cluster. The cluster signature is the
+  normalised DOM skeleton with text removed, which stage 2 produces anyway, so 4,198 news
+  detail pages collapse to two captures while all 4,198 stay proven at stages 1 and 2.
+- **Tier 3**: seeded remainder, within `--visual-budget`.
+
+**Coverage is declared, never implied.** The manifest records `coverage.notCaptured[]` with
+the actual URL ids and a reason from a fixed set. When a budget is exhausted, the generated
+summary says so in its first paragraph.
+
+## Determinism
+
+Sampling uses a seeded sfc32 + Fisher-Yates shuffle. The seed is recorded in the manifest,
+and the manifest verifies its own hash before use.
+
+Stabilisation, applied identically before and after: `reducedMotion`, fixed colour scheme,
+explicit locale and timezone, device scale factor 1, animations and transitions off,
+`caret-color: transparent`, `scrollbar-gutter: stable`, `document.fonts.ready` plus explicit
+per-face loading, lazy-load forced by stepped scroll, videos paused and rewound, consent
+**seeded** as cookies/localStorage rather than clicked.
+
+Two that carry most of the weight and are easy to miss:
+
+- **`Math.random` is seeded per capture.** Rotating carousels, shuffled teasers and generated
+  element ids cannot be stabilised with CSS, and they are the most common remaining flake
+  once animations are off.
+- **The clock is pinned but keeps moving.** A hard freeze divides by zero in real code; a
+  fixed origin plus a monotonic counter is stable and still lets timing code run.
+
+`networkidle` is not used. A quiet-period detector counts in-flight requests, so a page that
+never settles reports what it was waiting for.
+
+## Security
+
+Every URL passes the guard at nine call sites, including immediately before each `page.goto`
+re-read from the manifest, on every redirect hop, and on `framenavigated`.
+
+The guard uses **pinned-origin allow-listing**: each allowed origin is resolved once and its
+addresses frozen, so a private address is permitted only when it is pinned *and* its origin
+is allow-listed. `acme.ddev.site → 127.0.0.1` works; `169.254.169.254`, `redis:6379`,
+`host.docker.internal`, a different host on the same IP, and a host that later rebinds are
+all refused.
+
+Third-party requests are blocked by default and counted. `--disable-web-security` is gone;
+`--no-sandbox` needs `T3U_ALLOW_NO_SANDBOX=1` and is recorded in the fingerprint.
+
+Backend credentials come from the process environment or an explicit `--env-file` outside the
+repository — never an implicit `.env`. The origin is asserted before they are typed and again
+after the login POST settles.
+
+## Reports
+
+Every report goes through one write door: validate → redact → atomic write. A report that
+fails its own schema is exit 2 — the harness must not emit malformed evidence. A `pass`
+verdict carrying open blocking findings is refused as internally inconsistent.
+
+Page titles, console messages and module labels are stored under `untrusted*` keys, capped,
+escaped and fenced, and **no verdict-producing path reads a string field**. The test for this
+mutates the injected text and asserts the verdict is byte-identical.
+
+Markdown summaries are generated from the JSON. A number in a summary that appears in no
+report is a fabrication.
 
 ## Tuning
 
-| Variable | Default | Purpose |
+| Variable / flag | Default | Purpose |
 |---|---|---|
-| `LANGUAGE_LIST` | `en,de` | language prefixes for per-language sitemaps |
-| `GOLDEN_PATH_URLS` | (empty) | must-test URLs |
-| `RANDOM_URLS_PER_SITEMAP` | `10` | random sample per sitemap |
-| `MAX_URLS` | `100` | overall cap |
-| `SITEMAP_CONCURRENCY` | `4` | parallel sitemap fetches |
-| `SCREENSHOT_CONCURRENCY` | CPU-based, ≤6 | parallel screenshot workers |
-| `SCREENSHOT_RETRIES` | `1` | retry failed jobs |
-| `SCREENSHOT_STABILIZE_MS` | `2000` | wait after DOMContentLoaded |
-| `COMPARE_CONCURRENCY` | CPU-based, ≤4 | parallel comparison workers |
-| `COMPARE_WORKER_TIMEOUT_MS` | `120000` | per-image timeout |
-| `VISUAL_COMPARE_ENGINE` | `odiff` | `odiff` or `pixelmatch` |
-| `ODIFF_BIN` | auto-detected | explicit binary path |
-| `BROKEN_PAGE_STRINGS` | built-in list | error markers for page checks |
-| `BE_USER` / `BE_PASSWORD` | (none) | backend credentials for the sweep |
+| `--seed` | run id | Sampling seed; recorded in the manifest |
+| `--visual-budget` | `1500` | Screenshot capture budget |
+| `--lighthouse-sample` | `25` | URLs for Lighthouse |
+| `--runs` | `5` | Lighthouse runs per URL, median reported |
+| `--reshoots` | `1` | Flake quarantine re-shoots |
+| `--redaction-profile` | `local` | `local` or `share` (for the KPI document) |
+| `--allow-origin` | — | Additional allowed origin, repeatable |
+| `--env-file` | — | Explicit secret file; no implicit `.env` |
+| `ODIFF_BIN` | auto | Explicit odiff binary |
+| `PLAYWRIGHT_CHANNEL` | — | Use a branded Chrome channel |
+| `T3U_ALLOW_NO_SANDBOX` | unset | Opt into a weakened browser; recorded |
+| `BE_USER` / `BE_PASSWORD` | — | Backend credentials for the sweep |
 
-macOS: Playwright's `chromium-headless-shell` can crash on recent versions; both scripts detect
-Darwin and launch full Chromium with `--headless=new` (`PLAYWRIGHT_CHANNEL=chrome` overrides).
+macOS: Playwright's `chromium-headless-shell` can crash on recent versions; the harness
+detects Darwin and launches full Chromium with `--headless=new`.
+
+## Tests
+
+`npm test` runs 138 tests with no network, no DDEV and no browser: unit tests over the guard,
+sitemap walker, normaliser, classifier, manifest, write door, state machine and lockfile, and
+e2e tests against a local fixture server that serves a hostile sitemap, a before/after site
+pair with seeded regressions, and injected page content.
 
 ## Fallback
 
-When the bundled harness cannot run, scaffold Playwright `toHaveScreenshot` tests instead, with
-animations disabled and dynamic regions masked or stabilised. An `.mdc`-only client has the skill
-body but **not** `scripts/`, so it must use this fallback — and the closure certificate records the
-lower evidence bar.
+An `.mdc`-only client has the skill body but **not** `scripts/`, so it must scaffold
+Playwright `toHaveScreenshot` tests instead, with animations disabled and dynamic regions
+masked. The closure certificate records the lower evidence bar.

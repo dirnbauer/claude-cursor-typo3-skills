@@ -306,6 +306,77 @@ export class UrlGuard {
   }
 }
 
+/**
+ * The base URL is operator input, and everything else is validated *against* it — so it is
+ * the one origin that never gets checked by the origin rule. That asymmetry is a hole: a
+ * base URL of http://169.254.169.254/ would put the cloud metadata endpoint on the
+ * allowlist and pin it, and every later check would happily agree.
+ *
+ * Loopback is explicitly fine (that is what DDEV is). Link-local, CGNAT, multicast and
+ * reserved space are never a project someone is upgrading.
+ */
+const IMPLAUSIBLE_BASE_V4 = [
+  ['169.254.0.0', 16, 'link-local / cloud metadata'],
+  ['100.64.0.0', 10, 'CGNAT'],
+  ['192.0.0.0', 24, 'IETF protocol assignments'],
+  ['198.18.0.0', 15, 'benchmarking'],
+  ['224.0.0.0', 4, 'multicast'],
+  ['240.0.0.0', 4, 'reserved'],
+  ['0.0.0.0', 8, 'unspecified'],
+  ['255.255.255.255', 32, 'broadcast'],
+];
+
+export async function assertPlausibleBaseUrl(raw, { resolver } = {}) {
+  let url;
+  try { url = new URL(String(raw)); } catch {
+    throw new PolicyError(`Base URL is not a valid URL: ${String(raw).slice(0, 120)}`, { purpose: 'base-url' });
+  }
+  if (!ALLOWED_PROTOCOLS.has(url.protocol)) {
+    throw new PolicyError(`Base URL must be http or https, got ${url.protocol}`, { purpose: 'base-url' });
+  }
+
+  const host = stripBrackets(url.hostname.toLowerCase().replace(/\.$/, ''));
+  if (isObfuscatedIpLiteral(host)) {
+    throw new PolicyError(`Base URL uses an obfuscated IP literal: ${host}`, { purpose: 'base-url', host });
+  }
+
+  let addresses;
+  if (net.isIP(host)) {
+    addresses = [host];
+  } else {
+    const resolve = resolver ?? (async (h) => (await dns.lookup(h, { all: true, verbatim: true })).map((r) => r.address));
+    try { addresses = await resolve(host); }
+    catch (err) {
+      throw new PolicyError(`Base URL host does not resolve: ${host}`, { purpose: 'base-url', host, cause: String(err) });
+    }
+  }
+
+  for (const addr of addresses) {
+    const v4 = net.isIPv4(addr) ? addr : embeddedV4(addr);
+    if (v4) {
+      const hit = IMPLAUSIBLE_BASE_V4.find(([base, bits]) => inV4Range(v4, base, bits));
+      if (hit) {
+        throw new PolicyError(
+          `Base URL resolves into ${hit[2]} (${addr}). That is never a TYPO3 project — refusing.`,
+          { purpose: 'base-url', host, address: addr, range: hit[2] },
+        );
+      }
+      continue;
+    }
+    if (net.isIPv6(addr)) {
+      const g = expandV6(addr);
+      const first = g ? parseInt(g[0], 16) : 0;
+      if ((first & 0xffc0) === 0xfe80 || (first & 0xff00) === 0xff00) {
+        throw new PolicyError(
+          `Base URL resolves into IPv6 link-local or multicast (${addr}). Refusing.`,
+          { purpose: 'base-url', host, address: addr },
+        );
+      }
+    }
+  }
+  return { url, origin: url.origin, addresses };
+}
+
 function stripBrackets(h) { return h.replace(/^\[|\]$/g, ''); }
 
 export function normalizeOrigin(origin) {
