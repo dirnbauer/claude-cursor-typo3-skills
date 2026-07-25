@@ -1,4 +1,4 @@
 interface:
   display_name: "TYPO3 14 Update"
-  short_description: "Update TYPO3 v12/v13 to 14.3 LTS in local DDEV"
-  default_prompt: "Use $typo3-14-update to update this TYPO3 v12/v13 project to 14.3 LTS inside the local DDEV environment, keeping rendering identical via the visual regression loop, without deploying."
+  short_description: "Prove-invisible v12/v13 to 14.3 update in local DDEV, then optional elevation"
+  default_prompt: "Use $typo3-14-update to update this TYPO3 v12/v13 project to 14.3 LTS inside the local DDEV environment under the invariance contract: seal the original baseline before any change, run the determinism self-test first, document every loop in its own directory under .typo3-update, and close only at zero unexplained differences. Do not start elevation work and do not deploy."
