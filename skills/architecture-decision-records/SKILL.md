@@ -5,6 +5,8 @@ description: Creates and reviews architecture decision records (ADRs), decision 
 
 # Architecture decision records
 
+> Source: https://github.com/dirnbauer/webconsulting-skills
+
 Write ADRs as a durable record of why one architecturally significant choice
 was made. Prefer a small factual record over a broad design guide.
 
@@ -52,6 +54,28 @@ python3 skills/architecture-decision-records/scripts/validate_adrs.py docs/adr \
 
 Omit `--require-history` for prospective records. Add the repository's own
 renderer, link checker, or Markdown/ReST linter after this structural check.
+
+## Decisions taken inside a running process
+
+Some skills record decisions while work is in progress rather than in a project's
+permanent `docs/adr`. `typo3-14-update` is the case to know: it writes ADRs into
+`.typo3-update/decisions/` for the run scope, degraded sampling, and any URL it
+had to exclude from its invariance claim.
+
+Two rules apply there and are worth carrying to any similar process:
+
+- **An ADR that weakens a guarantee must say so explicitly**, and the weakening
+  must also appear in whatever certificate or report states the guarantee. A
+  documented limitation is honest; an implied one is not.
+- **Validate before the loop closes**, not at the end of the project:
+
+  ```bash
+  python3 skills/architecture-decision-records/scripts/validate_adrs.py \
+    .typo3-update/decisions
+  ```
+
+Run-scoped ADRs stay with their run. Promote one into the project's permanent
+decision log only when it outlives the process that produced it.
 
 ## Resources
 

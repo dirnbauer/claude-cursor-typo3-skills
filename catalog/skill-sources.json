@@ -138,17 +138,15 @@
     "skill_name": "architecture-decision-records",
     "description": "Creates and reviews architecture decision records (ADRs), decision logs, and supersession histories using established conventions and verifiable evidence. Use when users ask to write, reconstruct, audit, standardize, validate, or maintain ADRs, architecture decisions, decision logs, or ADR templates in Markdown or reStructuredText.",
     "source_owner": "webconsulting",
-    "source_url": null,
+    "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/architecture-decision-records/SKILL.md",
-    "line_count": 63,
+    "line_count": 87,
     "frontmatter_keys": [
       "name",
       "description"
     ],
     "pass_1": [],
-    "pass_2": [
-      "no explicit source note; current assumption is webconsulting-original"
-    ],
+    "pass_2": [],
     "pass_3": []
   },
   {
@@ -1616,7 +1614,7 @@
     "source_owner": "webconsulting",
     "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-14-update/SKILL.md",
-    "line_count": 402,
+    "line_count": 404,
     "frontmatter_keys": [
       "name",
       "description"

@@ -267,6 +267,7 @@ anything the routed skill says.**
 | 8 | `typo3-security`, `security-audit` | always |
 | 9 | `typo3-testing` | always — preserve behaviour, add missing coverage |
 | 10 | `typo3-docs` | always — README, documentation, upgrade notes, changelog |
+| 11 | `architecture-decision-records` | whenever a decision goes into `decisions/` — format, status lifecycle, and the bundled validator |
 
 After inventory add as needed: `typo3-batch`, `typo3-content-blocks`, `typo3-datahandler`,
 `typo3-translations`, `typo3-accessibility`, `typo3-wcag22-aa-agentic`, `typo3-webcomponents`,
@@ -392,6 +393,7 @@ incomplete rather than claiming success. A gate that does not apply needs an exp
 | `references/feature-upgrades.md` | Solr, Visual Editor, CKEditor, security headers |
 | `references/harness-contract.md`, `references/visual-regression.md` | running the harness |
 | `references/kpi-report.md` | the final report |
+| `architecture-decision-records` skill | writing an ADR into `decisions/` |
 
 ## Verification sources
 
