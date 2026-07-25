@@ -1,0 +1,81 @@
+# typo3-14-update run configuration
+# Copied into .typo3-update/config/run.yml at phase P00 and filled in there.
+schema: typo3-14-update/run-config@1
+
+project:
+  name: ""
+  # Scheme included and never rewritten. This is the ONE origin credentials and
+  # navigation may reach; everything else is refused by the URL guard.
+  trusted_origin: "https://example.ddev.site"
+  ddev_project: ""
+  # Real site language prefixes, not a guess. Discovery reads /<lang>/sitemap.xml per entry.
+  languages: ["de", "en"]
+
+target:
+  typo3: "^14.3"          # never ^14.0 — 14.0-14.2 receive no security updates
+  php: "8.4"              # standard target
+  php_try: "8.5"          # attempted first; falls back to php when a package blocks
+  database: ""
+
+discovery:
+  # Reproducible sampling. Change it and every later comparison is against a different set.
+  seed: ""
+  # Must-test URLs, relative by default. Absolute URLs require allow_absolute_golden_paths
+  # AND an entry in allowed_origins.
+  golden_paths:
+    - "/"
+  allow_absolute_golden_paths: false
+  max_sitemap_depth: 3
+  max_sitemap_documents: 50
+  max_urls: 20000
+
+network:
+  # Third-party requests are blocked by default. Every entry here is a deliberate
+  # exception that weakens both determinism and privacy — justify each one.
+  allowed_origins: []
+  block_third_party: true
+
+capture:
+  viewports:
+    - { name: desktop, width: 1920, height: 1080, device_scale_factor: 1 }
+    - { name: tablet,  width: 820,  height: 1180, device_scale_factor: 1 }
+    - { name: mobile,  width: 390,  height: 844,  device_scale_factor: 1 }
+  states:
+    - default
+    - keyboard-focus
+    - nav-open
+    - dropdown-open
+    - accordion-open
+    - form-empty
+    - form-validation-error
+    - modal-open
+  locale: "de-AT"
+  timezone: "Europe/Vienna"
+  color_scheme: "light"
+  # Seeded per capture. This is what makes randomised carousels, shuffled teasers and
+  # generated element ids deterministic.
+  page_random_seed: 20260725
+  frozen_clock_epoch: 1774425600000
+  # Seeded as cookies/localStorage, never by clicking the banner — clicking is timing-dependent.
+  consent_state: {}
+
+# Pages that are genuinely non-deterministic and cannot be stabilised.
+# Each entry needs an ADR and is EXCLUDED from the invariance claim, named in the
+# closure certificate. Never use this to silence an inconvenient regression.
+unstable_urls: []
+
+contract_b:
+  # Contract B cannot start until the Contract A closure certificate exists.
+  # Enable only the tracks the user approved.
+  performance_cwv: false
+  seo_technical: false
+  accessibility_manual: false
+  security_posture: false
+  media_and_cache: false
+  code_quality: false
+  ia_and_content: false      # recommendation-only by default
+
+reporting:
+  kpi_report: true
+  language: "de"
+  commit_run_directory: null   # ask once at P00 and record the answer

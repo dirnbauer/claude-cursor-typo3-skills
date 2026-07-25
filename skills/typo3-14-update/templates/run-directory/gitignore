@@ -1,0 +1,25 @@
+# Installed as .typo3-update/.gitignore
+#
+# Keep the audit trail, drop the bulk. The documents, reports, manifests and checksums
+# are small and are the evidence; the PNGs are large, numerous, and reproducible from a
+# sealed baseline plus a recorded command. MANIFEST.sha256 still proves what the images
+# were, so the evidence chain survives even where the images are not committed.
+
+**/artifacts/
+baseline/**/shots/
+baseline/**/dom/
+
+# Never commit these.
+*.sql
+*.sql.gz
+.env
+.env.*
+*secret*
+*credentials*
+
+!.gitignore
+!**/*.md
+!**/*.json
+!**/*.yml
+!**/SHA256SUMS
+!**/MANIFEST.sha256

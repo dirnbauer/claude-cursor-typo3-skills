@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dirnbauer/webconsulting-skills/skills/typo3-14-update/assets/schemas/loop-doc-frontmatter.schema.json",
+  "title": "typo3-14-update loop document front matter",
+  "description": "Carried by all seven markdown documents in every loop directory, so a gate can be checked by reading one file instead of parsing prose.",
+  "type": "object",
+  "required": ["schema", "run_id", "loop_id", "track", "contract", "doc", "status", "created_at"],
+  "properties": {
+    "schema": { "const": "typo3-14-update/loop-doc@1" },
+    "run_id": { "type": "string" },
+    "loop_id": { "type": "string", "pattern": "^[0-9]{3}$" },
+    "loop_slug": { "type": "string" },
+    "track": { "enum": ["harness", "invariance", "elevation", "report"] },
+    "contract": { "enum": ["A", "B", "none"] },
+    "phase": { "type": "string", "pattern": "^P[0-9]{2}$" },
+    "doc": {
+      "enum": ["charter", "preconditions", "plan", "iterations", "findings", "evidence", "exit"],
+      "description": "One per protocol stage. 00-charter, 01-preconditions, 02-plan, 03-iterations, 04-findings, 05-evidence, 06-exit."
+    },
+    "baseline_ref": {
+      "type": ["string", "null"],
+      "description": "A Contract A loop naming anything other than A-original is a rules violation."
+    },
+    "sample_ref": { "type": ["string", "null"] },
+    "env_fingerprint": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "content_fingerprint": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "snapshot": { "type": ["string", "null"] },
+    "approval_ref": { "type": ["string", "null"], "pattern": "^APR-[0-9]{3}$" },
+    "status": { "enum": ["planned", "open", "green", "aborted", "superseded", "invalid"] },
+    "append_only": {
+      "type": "boolean",
+      "description": "True for 03-iterations and 05-evidence. Rewriting them instead of appending hides history that git would otherwise show."
+    },
+    "frozen": {
+      "type": "boolean",
+      "description": "True for 00-charter and 01-preconditions once written, so a loop changing its own preconditions is detectable."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "contract": { "const": "A" }, "track": { "const": "invariance" } },
+        "required": ["contract", "track"]
+      },
+      "then": { "properties": { "baseline_ref": { "const": "A-original" } } }
+    },
+    {
+      "if": { "properties": { "contract": { "const": "B" } }, "required": ["contract"] },
+      "then": {
+        "properties": { "approval_ref": { "type": "string", "pattern": "^APR-[0-9]{3}$" } },
+        "required": ["approval_ref"]
+      }
+    },
+    {
+      "if": { "properties": { "doc": { "enum": ["iterations", "evidence"] } }, "required": ["doc"] },
+      "then": { "properties": { "append_only": { "const": true } }, "required": ["append_only"] }
+    },
+    {
+      "if": { "properties": { "doc": { "enum": ["charter", "preconditions"] } }, "required": ["doc"] },
+      "then": { "required": ["frozen"] }
+    }
+  ]
+}

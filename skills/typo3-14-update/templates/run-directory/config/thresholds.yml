@@ -1,0 +1,80 @@
+# Thresholds and budgets.
+# Visual thresholds must be IDENTICAL across every Contract A loop — gate A2.5 checks it.
+# Changing one after the baseline is sealed is not grantable; see rules/20-baseline-integrity.md.
+schema: typo3-14-update/thresholds@1
+
+visual:
+  # Per-pixel colour-distance sensitivity passed to the compare engine.
+  threshold: 0
+  # The target is zero unexplained pixels. There is no "minor" bucket: on a long
+  # full-page screenshot a percentage covers a great many pixels, so a missing button
+  # can hide inside "1%". diff_percent stays in the report as data only.
+  max_unexplained_diff_pixels: 0
+  engine: odiff              # odiff | pixelmatch
+  reshoots_before_finding: 1 # flake quarantine
+  anti_aliasing: true
+
+coverage:
+  http_required_percent: 100
+  dom_required_percent: 100
+  # Tier 1 and template-cluster representatives are always captured. Above this budget
+  # the remainder is a seeded sample, and every uncaptured URL id is named in the manifest.
+  visual_capture_budget: 1500
+  max_escalation_per_cluster: 50
+  backend_module_required_coverage: 100
+
+budgets:
+  default:      { max_iterations: 6, time_budget_min: 90,  change_files: 10, change_lines: 400 }
+  harness:      { max_iterations: 3, time_budget_min: 60,  change_files: 10, change_lines: 400 }
+  closure_300:  { max_iterations: 8, time_budget_min: 240, change_files: 10, change_lines: 400 }
+  no_progress_abort_after: 2
+  oscillation_abort_after: 1
+  selftest_max_age_hours: 24
+
+# Contract B targets. Every one is measured locally in DDEV, which is why every one
+# carries a caveat in references/quality-bars.md. Do not quote an absolute local score
+# without it.
+contract_b:
+  performance:
+    lcp_mobile_ms: 2500
+    lcp_desktop_ms: 1800
+    cls: 0.05
+    cls_hard_fail: 0.1
+    tbt_ms: 200              # an INP PROXY, not INP. Never claim "INP passing" from lab data.
+    fcp_ms: 1800
+    speed_index_ms: 3400
+    lighthouse_performance_mobile: 90
+    lighthouse_performance_desktop: 95
+    critical_js_kb: 170
+    critical_css_kb: 60
+    runs_per_url: 5
+    aggregate: median
+  seo:
+    lighthouse_seo: 100
+    canonical_self_referential_percent: 100
+    sitemap_200_percent: 100
+    title_min_chars: 30
+    title_max_chars: 60
+    description_min_chars: 70
+    description_max_chars: 160
+  accessibility:
+    axe_serious_or_critical: 0
+    lighthouse_accessibility: 100
+    contrast_failures: 0
+    min_target_size_px: 24
+  security:
+    csp_enforce: true
+    csp_unsafe_inline_script: 0
+    csp_unsafe_eval: 0
+    observatory_grade_min: "A"   # computed OFFLINE; never submit the site to a remote scanner
+    composer_audit_advisories: 0
+  media:
+    modern_format_byte_share_percent: 80
+    max_oversize_factor: 1.5
+    page_cache_hit_percent: 100
+  code_quality:
+    phpstan_level_project: 9
+    phpstan_level_packages: 10
+    phpstan_baseline_must_shrink: true
+    deprecation_log_entries: 0
+    extension_scanner_strong_matches: 0

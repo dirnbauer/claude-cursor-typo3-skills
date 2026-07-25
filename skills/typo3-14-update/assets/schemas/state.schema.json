@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dirnbauer/webconsulting-skills/skills/typo3-14-update/assets/schemas/state.schema.json",
+  "title": "typo3-14-update run state",
+  "description": "The single source of truth for loop preconditions. Never derived from the transcript; always read from disk.",
+  "type": "object",
+  "required": ["schema", "run_id", "target", "contract_a", "contract_b", "baselines", "fingerprints", "loops", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "typo3-14-update/state@1" },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*$",
+      "description": "YYYY-MM-DD-<project-slug>"
+    },
+    "project": {
+      "type": "object",
+      "required": ["name", "trusted_origin"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "trusted_origin": {
+          "type": "string",
+          "format": "uri",
+          "description": "The one origin credentials and navigation are allowed to reach. Scheme included; never rewritten."
+        },
+        "ddev_project": { "type": "string" },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "run_dir": { "type": "string", "default": ".typo3-update" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": ["kind", "typo3_from", "typo3_to", "php_from", "php_to"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["project", "sitepackage", "extension"] },
+        "typo3_from": { "type": "string" },
+        "typo3_to": { "type": "string", "default": "14.3" },
+        "php_from": { "type": "string" },
+        "php_to": {
+          "type": "string",
+          "default": "8.4",
+          "description": "8.4 is the standard target; 8.5 when the whole dependency set resolves on it."
+        },
+        "php_85_evaluated": {
+          "type": ["boolean", "null"],
+          "description": "True once composer why-not php 8.5 has actually been run. null means not yet checked."
+        },
+        "php_85_blockers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "contract_a": {
+      "type": "object",
+      "required": ["phase", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "phase": { "type": "string", "pattern": "^P[0-9]{2}$" },
+        "status": { "enum": ["open", "closed", "blocked"] },
+        "closed_at": { "type": ["string", "null"], "format": "date-time" },
+        "closure_ref": { "type": ["string", "null"] }
+      }
+    },
+    "contract_b": {
+      "type": "object",
+      "required": ["unlocked", "tracks"],
+      "additionalProperties": false,
+      "properties": {
+        "unlocked": {
+          "type": "boolean",
+          "description": "Set true only by the Contract A closure certificate. Gate B1.1 compares timestamps."
+        },
+        "unlocked_at": { "type": ["string", "null"], "format": "date-time" },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["loop_id", "slug", "approval_ref", "baseline_ref", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "loop_id": { "type": "string" },
+              "slug": { "type": "string" },
+              "approval_ref": { "type": "string" },
+              "baseline_ref": { "type": "string" },
+              "status": { "enum": ["planned", "open", "green", "aborted", "stopped"] }
+            }
+          }
+        }
+      }
+    },
+    "baselines": {
+      "type": "object",
+      "description": "A-original is the only baseline a Contract A loop may bind to.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["sealed"],
+        "additionalProperties": false,
+        "properties": {
+          "sealed": { "type": "boolean" },
+          "sealed_at": { "type": ["string", "null"], "format": "date-time" },
+          "manifest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+          "urls": { "type": "integer", "minimum": 0 },
+          "captures": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "fingerprints": {
+      "type": "object",
+      "required": ["environment", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "environment": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+        "content": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+        "sealed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "selftest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["never-run", "open", "green", "aborted"] },
+        "at": { "type": ["string", "null"], "format": "date-time" },
+        "lock_hash": { "type": ["string", "null"] },
+        "coverage": { "type": ["string", "null"] },
+        "quarantined_captures": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+        "seed": { "type": "string" }
+      }
+    },
+    "loops": {
+      "type": "object",
+      "description": "loop_id -> verdict",
+      "propertyNames": { "pattern": "^[0-9]{3}$" },
+      "additionalProperties": { "enum": ["planned", "open", "green", "aborted", "superseded"] }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" }
+    },
+    "approvals": { "type": "array", "items": { "type": "string", "pattern": "^APR-[0-9]{3}$" } },
+    "decisions": { "type": "array", "items": { "type": "string", "pattern": "^ADR-[0-9]{3}$" } },
+    "snapshots": { "type": "array", "items": { "type": "string" } },
+    "open_findings": { "type": "integer", "minimum": 0 },
+    "blocked": {
+      "type": ["object", "null"],
+      "description": "Non-null means the run is stopped and waiting on the user.",
+      "required": ["reason", "since", "loop_id"],
+      "additionalProperties": false,
+      "properties": {
+        "reason": { "type": "string" },
+        "since": { "type": "string", "format": "date-time" },
+        "loop_id": { "type": "string" },
+        "evidence_ref": { "type": ["string", "null"] }
+      }
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

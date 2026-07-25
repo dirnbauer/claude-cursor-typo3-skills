@@ -1,0 +1,65 @@
+{
+  "schema": "typo3-14-update/state@1",
+  "run_id": "0000-00-00-project",
+  "project": {
+    "name": "",
+    "trusted_origin": "",
+    "ddev_project": "",
+    "languages": [],
+    "run_dir": ".typo3-update"
+  },
+  "target": {
+    "kind": "project",
+    "typo3_from": "",
+    "typo3_to": "14.3",
+    "php_from": "",
+    "php_to": "8.4",
+    "php_85_evaluated": null,
+    "php_85_blockers": []
+  },
+  "contract_a": {
+    "phase": "P00",
+    "status": "open",
+    "closed_at": null,
+    "closure_ref": null
+  },
+  "contract_b": {
+    "unlocked": false,
+    "unlocked_at": null,
+    "tracks": []
+  },
+  "baselines": {
+    "A-original": {
+      "sealed": false,
+      "sealed_at": null,
+      "manifest": null,
+      "urls": 0,
+      "captures": 0
+    }
+  },
+  "fingerprints": {
+    "environment": null,
+    "content": null,
+    "sealed_at": null
+  },
+  "selftest": {
+    "status": "never-run",
+    "at": null,
+    "lock_hash": null,
+    "coverage": null,
+    "quarantined_captures": []
+  },
+  "manifest": {
+    "path": "manifests/url-manifest.json",
+    "hash": null,
+    "seed": ""
+  },
+  "loops": {},
+  "gates": {},
+  "approvals": [],
+  "decisions": [],
+  "snapshots": [],
+  "open_findings": 0,
+  "blocked": null,
+  "updated_at": "0000-00-00T00:00:00+00:00"
+}
