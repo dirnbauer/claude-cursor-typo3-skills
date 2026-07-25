@@ -1,25 +1,35 @@
 {
-  "name": "typo3-14-update-visual-harness",
+  "name": "typo3-14-update-harness",
+  "version": "2.0.0",
   "private": true,
-  "description": "Visual regression, smoke, and Lighthouse harness for TYPO3 updates: sitemap URL discovery, screenshots, comparison.",
-  "scripts": {
-    "harness": "node run-tests.cjs",
-    "backend-sweep": "node backend-module-sweep.cjs"
-  },
+  "type": "module",
+  "description": "Equality prover and security boundary for TYPO3 v14 update runs: guarded URL discovery, deterministic capture, three-stage comparison, backend sweep, and gated verdicts.",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.11"
+  },
+  "bin": {
+    "t3u": "./t3u.mjs"
+  },
+  "scripts": {
+    "t3u": "node t3u.mjs",
+    "test": "node --test tests/unit/*.test.mjs",
+    "test:coverage": "node --test --experimental-test-coverage tests/unit/*.test.mjs"
   },
   "dependencies": {
-    "@playwright/test": "^1.60.0",
-    "axios": "^1.16.1",
-    "cheerio": "^1.2.0",
     "chrome-launcher": "^1.1.0",
-    "commander": "^14.0.3",
-    "dotenv": "^17.4.2",
-    "fs-extra": "^11.3.5",
     "lighthouse": "^13.3.0",
+    "linkedom": "^0.18.5",
     "odiff-bin": "^4.3.8",
     "pixelmatch": "^7.2.0",
+    "playwright": "^1.60.0",
     "pngjs": "^7.0.0"
+  },
+  "comment:removed-dependencies": {
+    "axios": "follows redirects internally, so the URL guard never sees the hops",
+    "cheerio": "replaced by a targeted <loc> extractor that refuses entity declarations",
+    "commander": "replaced by node:util parseArgs",
+    "dotenv": "implicit .env loading from the skill directory leaked credentials across projects",
+    "fs-extra": "node:fs/promises covers mkdir recursive, rm and cp",
+    "@playwright/test": "the test runner was unused; node:test covers the tests"
   }
 }
