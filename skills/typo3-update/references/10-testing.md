@@ -37,8 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        typo3: ['^14.0']
-        php: ['8.2', '8.3', '8.4']
+        typo3: ['^14.3']
+        php: ['8.4', '8.5']
     
     steps:
       - uses: actions/checkout@v4

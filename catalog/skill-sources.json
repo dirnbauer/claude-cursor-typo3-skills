@@ -1235,19 +1235,20 @@
   {
     "directory": "redmine-agent-ready-tickets",
     "skill_name": "redmine-agent-ready-tickets",
-    "description": "Turn vague, mixed-scope, or underspecified Redmine issues into implementation contracts that Claude, ChatGPT, Codex, or another coding agent can execute with minimal clarification. Use when auditing a Redmine backlog; rewriting todos, bugs, features, spikes, or epics; splitting or merging tickets; defining parent/child relationships and dependencies; adding acceptance criteria and verification commands; preparing tickets for autonomous implementation; or reviewing whether existing tickets are agent-ready.",
-    "source_owner": "webconsulting",
-    "source_url": null,
+    "description": "Turn queued, vague, mixed-scope, or underspecified Redmine issues into evidence-backed implementation contracts that Claude, ChatGPT, Codex, Hermes, or another coding agent can execute. Use when a user says \"send to AI/KI\", asks Hermes to prepare a Redmine ticket, audits an AI-preparation queue, rewrites or splits tickets, applies Wayfinder-style research/grilling/prototype/task planning, creates vertical child tickets and blocking relations, or reviews whether a ticket is ready for autonomous implementation.",
+    "source_owner": "Matt Pocock",
+    "source_url": "https://github.com/mattpocock/skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/redmine-agent-ready-tickets/SKILL.md",
-    "line_count": 107,
+    "line_count": 204,
     "frontmatter_keys": [
       "name",
-      "description"
+      "description",
+      "license",
+      "compatibility",
+      "metadata"
     ],
     "pass_1": [],
-    "pass_2": [
-      "no explicit source note; current assumption is webconsulting-original"
-    ],
+    "pass_2": [],
     "pass_3": []
   },
   {
@@ -1611,11 +1612,11 @@
   {
     "directory": "typo3-14-update",
     "skill_name": "typo3-14-update",
-    "description": "Upgrade TYPO3 extensions, sitepackages, and full projects from v12 or v13 to TYPO3 14.3 LTS as v14-only code, including Composer metadata, Rector and Fractor migrations, PHPStan, workspaces, security, frontend performance, tests, documentation, deployment checks, and production-readiness verification. Use when asked for a complete TYPO3 v14 upgrade, a reusable v14 updater prompt, removal of legacy or dual-version compatibility, a production rollout, post-upgrade SEO or security verification, or a publication-ready TYPO3 14.3 extension.",
+    "description": "Update a TYPO3 v12 or v13 site to TYPO3 14.3 LTS as v14-only code inside a local DDEV project, wrapped in a visual regression main loop with a bundled Playwright harness: validate sitemap.xml for all languages, update Bootstrap 5, run an accessibility loop to green, baseline a random sitemap sample, update \u2014 extension strategy (Packagist, local packages/, forks, uninstall checks), Composer, PHP 8.4+, Rector/Fractor, PHPStan, upgrade wizards, workspaces, plain Vite build, plus Solr, Visual Editor, CKEditor RTE, and security-header upgrades \u2014 then repair until rendering is identical, and finish with a backend module sweep, Lighthouse over up to 100 pages, and a webconsulting Word KPI report. Never deploys to staging or live. Use for a complete TYPO3 v14 update of a v12/v13 site, updating all extensions to v14, visual regression testing around an update, pre-update sitemap, Bootstrap or accessibility work, a DDEV-local upgrade run, a reusable v14 updater prompt, or a publication-ready TYPO3 14.3 extension.",
     "source_owner": "webconsulting",
     "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-14-update/SKILL.md",
-    "line_count": 159,
+    "line_count": 226,
     "frontmatter_keys": [
       "name",
       "description"
@@ -1782,11 +1783,11 @@
   {
     "directory": "typo3-fractor",
     "skill_name": "typo3-fractor",
-    "description": "Automates non-PHP TYPO3 upgrade migrations with Fractor for FlexForms, TypoScript, Fluid, YAML, Htaccess, and composer.json changes. Use when running or configuring Fractor, upgrading non-PHP TYPO3 files, migrating FlexForms or TypoScript, modernizing Fluid templates, or combining Rector and Fractor for v14 work.",
+    "description": "Automates non-PHP TYPO3 upgrade migrations with Fractor for FlexForms, TypoScript, Fluid, YAML, XLIFF translation files, Htaccess, and composer.json changes. Use when running or configuring Fractor, upgrading non-PHP TYPO3 files, migrating FlexForms or TypoScript, modernizing Fluid templates, or combining Rector and Fractor for v14 work.",
     "source_owner": "webconsulting",
     "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-fractor/SKILL.md",
-    "line_count": 280,
+    "line_count": 298,
     "frontmatter_keys": [
       "name",
       "description",
@@ -1916,7 +1917,7 @@
     "source_owner": "webconsulting",
     "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-rector/SKILL.md",
-    "line_count": 345,
+    "line_count": 355,
     "frontmatter_keys": [
       "name",
       "description",
@@ -2065,7 +2066,7 @@
     "source_owner": "webconsulting",
     "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-update/SKILL.md",
-    "line_count": 332,
+    "line_count": 346,
     "frontmatter_keys": [
       "name",
       "description",

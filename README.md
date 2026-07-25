@@ -40,7 +40,7 @@ Category-specific add-ons are not counted as top-level skills.
 | **Database** | 1 skill | Postgres Best Practices (Supabase) |
 | **Marketing** | 43 skills | Marketing Skills plus split growth, SEO, ads, lifecycle, research, prospecting, SMS, and sales enablement skills (Corey Haines) |
 | **CRO & Growth** | 4 skills | CRO Funnel (AITYTech), Programmatic SEO (AITYTech), Launch Strategy (AITYTech), A/B Testing (AITYTech) |
-| **Code Quality & Refactoring** | 20 skills | Architecture Decision Records (webconsulting), Auto Review (Peter Steinberger), Agent MD Refactor (Softaworks), Refactor (GitHub), Refactor Clean (sickn33), Find Skills (Vercel), Grill Me and engineering/productivity workflow skills (Matt Pocock) |
+| **Code Quality & Refactoring** | 21 skills | Architecture Decision Records (webconsulting), Auto Review (Peter Steinberger), Agent MD Refactor (Softaworks), Refactor (GitHub), Refactor Clean (sickn33), Find Skills (Vercel), Redmine Agent-Ready Tickets and engineering/productivity workflow skills (Matt Pocock) |
 | **PHP & Tools** | 5 skills | PHP Modernization (Netresearch), CLI Tools (Netresearch), Context7 (Netresearch), Firecrawl (Firecrawl), Skill Creator (Anthropic) |
 | **Frontend & Design** | 9 skills | Branding (webconsulting), UI Design Patterns (webconsulting), Frontend Design (Anthropic), Impeccable (pbakaus), Web Design Guidelines (Vercel), Excalidraw (ooiyeefei), OG Image (Stevy Smith), React Best Practices (Vercel), shadcn/ui (Giuseppe Trisciuoglio) |
 | **Platform Design** | 8 skills | Android Design (ehmo), iOS Design (ehmo), iPadOS Design (ehmo), macOS Design (ehmo), tvOS Design (ehmo), visionOS Design (ehmo), watchOS Design (ehmo), Web Platform Design (ehmo) |
@@ -290,7 +290,7 @@ The Composer plugin will automatically run `install.sh` after installation to de
 | `typo3-initial-release` | initial release, 1.0.0, release readiness, release tag, TER, Packagist | "Prepare this TYPO3 14.3+ extension for v1.0.0" or "Run final release readiness review before tagging" |
 | `typo3-rector` | rector, refactoring, deprecation | "Use Rector to fix deprecations" |
 | `typo3-update` | update, upgrade, v14, migration, TYPO3 core | "Follow TYPO3 v14 patterns for my extension" |
-| `typo3-14-update` | complete v14 update, v14-only, production rollout, post-upgrade SEO, post-upgrade security, post-upgrade Solr | "Upgrade this project end-to-end to TYPO3 14.3 LTS and verify production readiness" |
+| `typo3-14-update` | complete v14 update, v14-only, visual regression run, frozen baseline, invariance contract, elevation contract, loop protocol, run directory, local DDEV upgrade | "Update this project to TYPO3 14.3 LTS in DDEV and prove the rendering is unchanged against a frozen baseline" |
 | `typo3-extension-upgrade` | extension upgrade, fractor | "Upgrade my extension to TYPO3 v14" |
 | `typo3-fractor` | fractor, flexform, typoscript migration, fluid migration | "Use Fractor to migrate FlexForms and TypoScript" |
 | `typo3-icon14` | icons, module icons, plugin icons, record icons, action icons, icon migration, Configuration/Icons.php | "Design or migrate TYPO3 v14 extension icons with live Core references" |
@@ -2340,7 +2340,7 @@ grep -r "DataHandler" skills/
 | **Upgrade & Migration** | | |
 | `typo3-rector` | TYPO3 upgrade patterns with Rector | webconsulting |
 | `typo3-update` | TYPO3 TYPO3 v14 migration guide (prefers v14) | webconsulting |
-| `typo3-14-update` | End-to-end TYPO3 14.3 LTS project and extension updater with production-readiness gates | webconsulting |
+| `typo3-14-update` | End-to-end TYPO3 14.3 LTS updater inside local DDEV under an invariance contract plus an optional elevation contract; never deploys | webconsulting |
 | `typo3-extension-upgrade` | Systematic extension upgrades (Rector, Fractor) | Netresearch |
 | `typo3-fractor` | Automated non-PHP migrations (FlexForm, TypoScript, Fluid, YAML) | webconsulting |
 | `typo3-icon14` | Design and migrate TYPO3 v14 extension icons | webconsulting |
@@ -2379,6 +2379,7 @@ grep -r "DataHandler" skills/
 | `handoff` | Compact the current conversation into a handoff document | Matt Pocock |
 | `improve-codebase-architecture` | Find architecture deepening opportunities in a codebase | Matt Pocock |
 | `prototype` | Build throwaway prototypes to explore logic, state, or UI choices | Matt Pocock |
+| `redmine-agent-ready-tickets` | Prepare queued Redmine issues as implementation-ready contracts with direct or Wayfinder planning | Matt Pocock |
 | `setup-matt-pocock-skills` | Scaffold issue tracker, triage labels, and domain doc config | Matt Pocock |
 | `tdd` | Test-driven development with a red-green-refactor loop | Matt Pocock |
 | `to-issues` | Break plans and PRDs into independently grabbable issues | Matt Pocock |
@@ -2704,8 +2705,8 @@ The following repositories are the source for skills in this collection:
 ### HeyGen (5 skills)
 - `gsap`, `hyperframes`, `hyperframes-cli`, `hyperframes-registry`, and `website-to-hyperframes`: https://github.com/heygen-com/hyperframes
 
-### Matt Pocock (15 skills)
-- `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out`: https://github.com/mattpocock/skills
+### Matt Pocock (16 skills)
+- `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `redmine-agent-ready-tickets`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out`: https://github.com/mattpocock/skills
 
 ### Peter Steinberger (1 skill)
 - `autoreview`: https://github.com/openclaw/agent-skills
@@ -2924,12 +2925,12 @@ Original repositories:
 ---
 
 We also thank **[Matt Pocock](https://github.com/mattpocock)** for their excellent open-source work.
-The `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out` skills in this collection build on that contribution.
+The `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `redmine-agent-ready-tickets`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out` skills in this collection build on that contribution.
 
-Adapted skills: `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out`
+Adapted skills: `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `redmine-agent-ready-tickets`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out`
 
 Original repositories:
-- `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out`: https://github.com/mattpocock/skills
+- `caveman`, `desiderio-teach`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `redmine-agent-ready-tickets`, `setup-matt-pocock-skills`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, and `zoom-out`: https://github.com/mattpocock/skills
 
 **Copyright (c) Matt Pocock** - Agent skills for real engineering workflows (MIT License)
 

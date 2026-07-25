@@ -390,7 +390,7 @@ TYPO3 backend Lit reference material for the `typo3-webcomponents` skill.
 | `typo3-initial-release` | First official TYPO3 14.3+ extension release workflow, final review, CI/tooling verification, and tagging | 1.0.0 | initial release, 1.0.0, release readiness, release tag, TER, Packagist |
 | `typo3-rector` | TYPO3 v14 upgrade patterns using Rector (typo3-rector 3.14, Rector 2.5) | 2.2.0 | rector, upgrade, migration, refactoring |
 | `typo3-update` | TYPO3 v14 development guide (constraints, APIs, upgrades) | 2.0.0 | update, upgrade, v14, migration |
-| `typo3-14-update` | v12/v13 to TYPO3 14.3 LTS updater around a visual regression main loop, finishing as a verified local DDEV site; never deploys to live | 2.0.0 | complete v14 update, v14-only, ddev update, local upgrade run, visual regression, accessibility loop, sitemap check, bootstrap 5 update, update all extensions, local packages, php 8.4, upgrade wizards, solr update, visual editor, rte ckeditor, security headers, lighthouse, KPI report |
+| `typo3-14-update` | v12/v13 to TYPO3 14.3 LTS updater under two contracts — invariance (provably identical rendering against a frozen baseline) then optional elevation (performance, SEO, security) — finishing as a verified local DDEV site; never deploys to live | 3.0.0 | complete v14 update, v14-only, ddev update, local upgrade run, invariance contract, elevation contract, frozen baseline, visual regression, determinism self-test, loop protocol, run directory, accessibility loop, sitemap check, bootstrap 5 update, update all extensions, local packages, php 8.4, upgrade wizards, solr update, visual editor, rte ckeditor, security headers, lighthouse, KPI report |
 | `typo3-extension-upgrade` | Systematic extension upgrades with Rector, Fractor, PHPStan | 1.0.0 | extension, upgrade, fractor |
 | `typo3-fractor` | Automated non-PHP migrations (FlexForm, TypoScript, Fluid, YAML, XLIFF) with Fractor 1.0 | 1.2.0 | fractor, flexform, typoscript migration, fluid migration, xliff |
 | `typo3-icon14` | Migrate extension icons to TYPO3 v14 line-art style | 1.0.0 | icons, backend module icons, icon migration, SVG icons, icon registry |
@@ -658,7 +658,7 @@ TYPO3 backend Lit reference material for the `typo3-webcomponents` skill.
 - **typo3-initial-release**: First official TYPO3 14.3+ extension release workflow with Composer metadata, CI/tooling, final review, and tagging gates
 - **typo3-rector**: Automated code refactoring with Rector for TYPO3 v14
 - **typo3-update**: Version migration and compatibility strategies for TYPO3 v14
-- **typo3-14-update**: End-to-end v14.3-only upgrade orchestration inside local DDEV — visual regression main loop with pre-update sitemap and accessibility gates, strategy for all extensions (Packagist, local packages/, forks, uninstall checks), upgrade wizards, workspaces, plain Vite build, Solr/Visual Editor/RTE/security-header feature upgrades, Lighthouse sampling, webconsulting-CI Word KPI report; never deploys to live
+- **typo3-14-update**: End-to-end v14.3-only upgrade orchestration inside local DDEV under two sequential contracts — invariance, where the migration must be provably invisible to visitors against a baseline frozen before any change, and elevation, where separately approved performance, SEO, accessibility and security work may start only after invariance is closed. Every step runs as one uniform loop protocol (preconditions, fingerprint freeze check, snapshot rollback anchor, bounded iterations, classified findings, abort-and-escalate) documented per loop in its own numbered directory. Covers the strategy for all extensions (Packagist, local packages/, forks, uninstall checks), upgrade wizards, workspaces, plain Vite build, Solr/Visual Editor/RTE/security-header feature upgrades, Lighthouse, and the webconsulting-CI Word KPI report; never deploys to live
 - **typo3-extension-upgrade**: Systematic extension upgrades with Rector, Fractor, PHPStan
 - **typo3-fractor**: Automated non-PHP migrations (FlexForm, TypoScript, Fluid, YAML, XLIFF, Htaccess)
 - **typo3-icon14**: Migrate extension icons from solid-background to v14 line-art style (currentColor, CSS custom properties)
@@ -1534,6 +1534,11 @@ Use case: Server configuration, deployment, hardening, security audits, incident
 ### Upgrade Session
 Active: `typo3-14-update`, `typo3-rector`, `typo3-fractor`, `typo3-update`, `typo3-extension-upgrade`, `typo3-batch`, `typo3-icon14`, `typo3-visual-editor`, `php-modernization`
 Use case: TYPO3 version migrations, PHP upgrades, non-PHP migrations, Fluid template migrations, icon modernization, TYPO3 v14 upgrades, batch migrations
+Note: `typo3-14-update` owns the version constraints, the PHP target and the migration process. `typo3-update` is the v14 API reference for writing v14 code — where the two differ, `typo3-14-update` wins.
+
+### Update Run Session
+Active: `typo3-14-update`, `typo3-ddev`, `typo3-vite`, `typo3-wcag22-aa-agentic`, `typo3-solr`, `typo3-visual-editor`, `typo3-security`, `webconsulting-branding`, `document-processing`
+Use case: A complete v12/v13 to 14.3 update run on a local DDEV clone — frozen baseline, determinism self-test, loop-by-loop documentation, backend module sweep, elevation tracks, and the Word KPI report
 
 ### Code Quality Session
 Active: `typo3-simplify`, `typo3-batch`, `refactor`, `refactor-clean`, `php-modernization`
@@ -1626,7 +1631,7 @@ Use case: Designing for multiple platforms, ensuring platform-appropriate patter
 | typo3-initial-release | ✓ | ✓ | ✓ | ✓ |
 | typo3-rector | ✓ | ✓ | ✓ | ✓ |
 | typo3-update | ✓ | ✓ | ✓ | ✓ |
-| typo3-14-update | ✓ | ✓ | ✓ | ✓ |
+| typo3-14-update | ✓ | — | — | ✓ ᴾ |
 | typo3-extension-upgrade | ✓ | ✓ | ✓ | ✓ |
 | typo3-fractor | ✓ | ✓ | ✓ | ✓ |
 | typo3-icon14 | ✓ | ✓ | ✓ | ✓ |
@@ -1681,6 +1686,10 @@ Use case: Designing for multiple platforms, ensuring platform-appropriate patter
 | find-skills | ✓ | ✓ | ✓ | ✓ |
 | shadcn-ui | ✓ | ✓ | ✓ | ✓ |
 | webconsulting-create-documentation | ✓ | ✓ | ✓ | ✓ |
+
+**PHP target policy.** TYPO3 v14 Core itself runs from PHP 8.2, which is why most rows above list 8.2 and 8.3. Project work in this collection targets **PHP 8.4 as the standard**, and **PHP 8.5 is supported and preferred where the whole dependency set resolves on it** — verify with `composer why-not php 8.5` before committing to it, and fall back to 8.4 when any package blocks. Reusable packages may still declare a broader range when they test and document it.
+
+ᴾ `typo3-14-update` is the exception in the table: it requires **PHP 8.4 or newer** and gates on it, so 8.2 and 8.3 are marked unsupported rather than untested.
 
 ## Adding New Skills
 

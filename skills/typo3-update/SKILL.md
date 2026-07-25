@@ -14,6 +14,10 @@ license: "MIT / CC-BY-SA-4.0"
 > **Strategy:** This collection targets **TYPO3 v14.x only**. Patterns here assume a v14 codebase.
 > For migrating from older majors, use `typo3-rector`, `typo3-extension-upgrade`, Fractor, and the official upgrade guide first.
 
+> **Scope — read this before using any constraint below.** This skill is the **v14 API reference**: how v14 code is written. It does not run upgrades.
+> Upgrading a whole project or site from v12/v13 is `typo3-14-update`, which owns the version constraints, the PHP target, the `ext_emconf.php` policy and the migration process end to end.
+> **Where the two differ, `typo3-14-update` wins** — load it first for an upgrade run and use this skill as the API reference during its manual-migration phase.
+
 > **TYPO3 API First:** Always use TYPO3's built-in APIs, core features, and established conventions before creating custom implementations. Do not reinvent what TYPO3 already provides. Always verify that the APIs and methods you use exist and are not deprecated in TYPO3 v14 by checking the official TYPO3 documentation.
 
 ## 1. Version Strategy
@@ -25,27 +29,9 @@ license: "MIT / CC-BY-SA-4.0"
 | **v14.x** | **Supported target** — examples and constraints assume TYPO3 v14 |
 | Older majors | **Not targeted** — complete a core upgrade, then use these patterns |
 
-**Best Practice:** Declare TYPO3 **v14-only** constraints in `composer.json` and `ext_emconf.php` for new work.
+**Best Practice:** Declare TYPO3 **v14-only** constraints in `composer.json`. Composer is the single source of truth in v14 — see the `ext_emconf.php` note below before adding one.
 
 ### Version Constraints
-
-```php
-<?php
-// ext_emconf.php — TYPO3 v14
-$EM_CONF[$_EXTKEY] = [
-    'title' => 'My Extension',
-    'version' => '2.0.0',
-    'state' => 'stable',
-    'constraints' => [
-        'depends' => [
-            'typo3' => '14.0.0-14.99.99',
-            'php' => '8.2.0-8.5.99',
-        ],
-        'conflicts' => [],
-        'suggests' => [],
-    ],
-];
-```
 
 ```json
 // composer.json — TYPO3 v14
@@ -53,8 +39,8 @@ $EM_CONF[$_EXTKEY] = [
     "name": "vendor/my-extension",
     "type": "typo3-cms-extension",
     "require": {
-        "php": "^8.2",
-        "typo3/cms-core": "^14.0"
+        "php": "^8.4",
+        "typo3/cms-core": "^14.3"
     },
     "extra": {
         "typo3/cms": {
@@ -64,13 +50,41 @@ $EM_CONF[$_EXTKEY] = [
 }
 ```
 
-> **Content Blocks:** `friendsoftypo3/content-blocks` may require **`typo3/cms-core` ^14.3** or higher (current 2.4.5 requires `^14.3`) — match the [Packagist constraint](https://packagist.org/packages/friendsoftypo3/content-blocks) before pinning `^14.0` only.
+Target **`^14.3`, not `^14.0`**: 14.3 is the supported LTS line, and 14.0 through 14.2 no longer receive security updates. A reusable package that genuinely tests a broader range may widen the constraint, but it must then prove it in CI rather than assert it.
+
+> **Content Blocks:** `friendsoftypo3/content-blocks` requires **`typo3/cms-core` ^14.3** or higher — match the [Packagist constraint](https://packagist.org/packages/friendsoftypo3/content-blocks) before pinning anything lower.
+
+### `ext_emconf.php` — Classic mode and TER publishing only
+
+TYPO3 feature [#108345](https://docs.typo3.org/c/typo3/cms-core/main/en-us/Changelog/14.0/Feature-108345-ExtensionMetadataInComposerJson.html) deprecates `ext_emconf.php` in v14; v15 no longer evaluates it. Composer-mode extensions should **not** ship one. Keep it only where a tool still requires it — TER/Tailor publishing, or a Classic-mode installation — and then keep it exactly in sync with `composer.json`:
+
+```php
+<?php
+// ext_emconf.php — only for Classic mode or TER publishing
+$EM_CONF[$_EXTKEY] = [
+    'title' => 'My Extension',
+    'version' => '2.0.0',
+    'state' => 'stable',
+    'constraints' => [
+        'depends' => [
+            'typo3' => '14.3.0-14.99.99',
+            'php' => '8.4.0-8.5.99',
+        ],
+        'conflicts' => [],
+        'suggests' => [],
+    ],
+];
+```
+
+For a full project or site upgrade, `typo3-14-update` owns this policy and removes the file for project-local extensions in `packages/`.
 
 ## 2. PHP Requirements
 
-### Minimum PHP Version: 8.2
+### Core floor 8.2 — project target 8.4 (8.5 where it resolves)
 
-TYPO3 v14 requires PHP 8.2+. Use modern PHP features:
+TYPO3 v14 Core requires PHP 8.2+, so a reusable package that tests and documents the broader range may declare `^8.2`. **Project and site work in this collection targets PHP 8.4 as the standard**, and PHP 8.5 is supported and preferred where the whole dependency set resolves on it — check `composer why-not php 8.5` and fall back to 8.4 when a package blocks. `typo3-14-update` enforces the 8.4 floor and gates on it.
+
+Use modern PHP features:
 
 ```php
 <?php

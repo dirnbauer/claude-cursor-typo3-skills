@@ -11,7 +11,7 @@ Continues `typo3-update` from [full guide](full-guide.md).
 ddev snapshot --name=before-upgrade
 
 # 2. Update composer constraints
-ddev composer require "typo3/cms-core:^14.0" --no-update
+ddev composer require "typo3/cms-core:^14.3" --no-update
 ddev composer update "typo3/*" --with-all-dependencies
 
 # 3. Run upgrade wizards
