@@ -41,6 +41,20 @@ async function loadESMModules() {
 }
 
 // Configuration
+// Documented as a "(built-in list)" default but previously absent, so the smoke test
+// detected nothing at all unless the caller knew to set BROKEN_PAGE_STRINGS.
+const DEFAULT_BROKEN_PAGE_STRINGS = [
+    'Oops, an error occurred',
+    'Uncaught TYPO3 Exception',
+    'Fatal error:',
+    'Parse error:',
+    'Call to undefined',
+    'An exception occurred',
+    'Whoops, looks like something went wrong',
+    'Service Unavailable',
+    'Internal Server Error',
+];
+
 const CONFIG = {
     timeout: 45000, // Increased timeout for better reliability
     viewports: {
@@ -1036,11 +1050,28 @@ async function compareScreenshots(beforeDir, afterDir, outputDir, jsonOutput) {
             }
         }
 
+        // Files present only in the "after" directory are invisible to a beforeDir-only walk:
+        // a page that started rendering MORE content would never be reported. Detect them.
+        try {
+            const afterFiles = (await fs.readdir(afterDir)).filter(f => f.endsWith('.png') && !f.startsWith('diff_'));
+            const beforeSet = new Set(files);
+            results.onlyInAfter = afterFiles.filter(f => !beforeSet.has(f));
+        } catch {
+            results.onlyInAfter = [];
+        }
+
+        // Zero-tolerance policy: "minor" is not a passing verdict. On a long full-page
+        // screenshot a percentage covers many pixels, so a missing button can hide inside it.
+        results.findings = results.differences + results.minorDifferences + results.errors
+            + (results.onlyInAfter?.length || 0);
+
         // Write JSON results
         await fs.writeFile(jsonOutput, JSON.stringify(results, null, 2));
 
-        logger.success(`Comparison completed: ${results.matches} matches, ${results.minorDifferences} minor differences, ${results.differences} differences, ${results.errors} errors`);
+        logger.success(`Comparison completed: ${results.matches} matches, ${results.minorDifferences} minor differences, ${results.differences} differences, ${results.errors} errors, ${results.onlyInAfter.length} only-in-after`);
         logger.info(`Results saved to ${path.resolve(jsonOutput)}`);
+
+        return results;
 
     } catch (error) {
         logger.error(`Failed to compare screenshots: ${error.message}`);
@@ -1060,7 +1091,7 @@ async function smokeTest(domain, jsonOutput) {
             startTime: new Date().toISOString(),
             visitedUrls: [],
             errors: [],
-            brokenPageStrings: process.env.BROKEN_PAGE_STRINGS ? process.env.BROKEN_PAGE_STRINGS.split('|') : []
+            brokenPageStrings: process.env.BROKEN_PAGE_STRINGS ? process.env.BROKEN_PAGE_STRINGS.split('|') : DEFAULT_BROKEN_PAGE_STRINGS
         };
 
         const browser = await chromium.launch(getChromiumLaunchOptions());
@@ -1210,6 +1241,9 @@ async function smokeTest(domain, jsonOutput) {
         logger.success(`Smoke test completed: visited ${results.totalVisited} URLs, found ${results.totalErrors} errors`);
         logger.info(`Results saved to ${path.resolve(jsonOutput)}`);
 
+        results.findings = results.totalErrors;
+        return results;
+
     } catch (error) {
         logger.error(`Failed to run smoke test: ${error.message}`);
         throw error;
@@ -1349,6 +1383,9 @@ async function lighthouseTest(domain, jsonOutput) {
         logger.success(`Lighthouse tests completed: ${successfulTests.length}/${results.summary.totalTests} successful`);
         logger.info(`Average scores - Performance: ${results.summary.averagePerformance}, Accessibility: ${results.summary.averageAccessibility}, Best Practices: ${results.summary.averageBestPractices}, SEO: ${results.summary.averageSEO}`);
         logger.info(`Results saved to ${path.resolve(jsonOutput)}`);
+
+        results.findings = results.summary.totalTests - successfulTests.length;
+        return results;
 
     } catch (error) {
         logger.error(`Failed to run Lighthouse tests: ${error.message}`);
@@ -1492,6 +1529,7 @@ async function getUrlsFromSitemap(domain) {
  * Main function
  */
 async function main() {
+    let result = null;
     try {
         const options = parseArguments();
 
@@ -1514,32 +1552,42 @@ async function main() {
                 if (!options.beforeDir || !options.afterDir || !options.outputDir || !options.jsonOutput) {
                     throw new Error('--before-dir, --after-dir, --output-dir, and --json-output are required for compare-screenshots action');
                 }
-                await compareScreenshots(options.beforeDir, options.afterDir, options.outputDir, options.jsonOutput);
+                result = await compareScreenshots(options.beforeDir, options.afterDir, options.outputDir, options.jsonOutput);
                 break;
 
             case 'smoke-test':
                 if (!options.domain || !options.jsonOutput) {
                     throw new Error('--domain and --json-output are required for smoke-test action');
                 }
-                await smokeTest(options.domain, options.jsonOutput);
+                result = await smokeTest(options.domain, options.jsonOutput);
                 break;
 
             case 'lighthouse-test':
                 if (!options.domain || !options.jsonOutput) {
                     throw new Error('--domain and --json-output are required for lighthouse-test action');
                 }
-                await lighthouseTest(options.domain, options.jsonOutput);
+                result = await lighthouseTest(options.domain, options.jsonOutput);
                 break;
 
             default:
                 throw new Error(`Unknown action: ${options.action}`);
         }
 
+        // Exit-code contract. Previously every action exited 0 regardless of outcome, so a
+        // run with 40 differing screenshots looked successful and nothing could gate on it.
+        //   0 = pass, 1 = findings, 2 = harness error
+        const findings = result && typeof result.findings === 'number' ? result.findings : 0;
+        if (findings > 0) {
+            logger.error(`Action completed with ${findings} finding(s) - exiting 1`);
+            process.exitCode = 1;
+            return;
+        }
+
         logger.success('Action completed successfully');
 
     } catch (error) {
         logger.error(`Action failed: ${error.message}`);
-        process.exit(1);
+        process.exitCode = 2;
     }
 }
 

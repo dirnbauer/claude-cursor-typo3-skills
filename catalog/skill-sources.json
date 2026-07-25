@@ -1612,11 +1612,11 @@
   {
     "directory": "typo3-14-update",
     "skill_name": "typo3-14-update",
-    "description": "Update a TYPO3 v12 or v13 site to TYPO3 14.3 LTS as v14-only code inside a local DDEV project, wrapped in a visual regression main loop with a bundled Playwright harness: validate sitemap.xml for all languages, update Bootstrap 5, run an accessibility loop to green, baseline a random sitemap sample, update \u2014 extension strategy (Packagist, local packages/, forks, uninstall checks), Composer, PHP 8.4+, Rector/Fractor, PHPStan, upgrade wizards, workspaces, plain Vite build, plus Solr, Visual Editor, CKEditor RTE, and security-header upgrades \u2014 then repair until rendering is identical, and finish with a backend module sweep, Lighthouse over up to 100 pages, and a webconsulting Word KPI report. Never deploys to staging or live. Use for a complete TYPO3 v14 update of a v12/v13 site, updating all extensions to v14, visual regression testing around an update, pre-update sitemap, Bootstrap or accessibility work, a DDEV-local upgrade run, a reusable v14 updater prompt, or a publication-ready TYPO3 14.3 extension.",
+    "description": "Update a TYPO3 v12 or v13 site to TYPO3 14.3 LTS inside a local DDEV project under two contracts. Invariance: the migration must be provably invisible to visitors, measured against a baseline frozen before any change. Elevation: separately approved performance, SEO, accessibility and security work may start only after invariance closes. Every step runs as one loop protocol with preconditions, a snapshot rollback anchor, bounded iterations, classified findings and abort conditions, documented per loop in its own numbered directory in a project-local .typo3-update run directory. Covers sitemap validation, Bootstrap 5, extension strategy, PHP 8.4+, Rector, Fractor, PHPStan, upgrade wizards, workspaces, a Vite build, Solr, Visual Editor, CKEditor RTE, security headers, Lighthouse and a Word KPI report. Never deploys to staging or live. Use for a complete TYPO3 v14 update, a visual regression run around an upgrade, or a proven DDEV upgrade.",
     "source_owner": "webconsulting",
     "source_url": "https://github.com/dirnbauer/webconsulting-skills",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-14-update/SKILL.md",
-    "line_count": 226,
+    "line_count": 402,
     "frontmatter_keys": [
       "name",
       "description"
