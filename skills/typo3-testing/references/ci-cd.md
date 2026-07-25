@@ -932,6 +932,51 @@ The CI workflow executes these checks (projects do not need to define them):
 7. **Architecture tests** -- phpat rules
 8. **Security audit** -- `composer audit`
 
+## Coverage Reporting Pitfalls
+
+### A "coverage drop" can be an expired flag, not missing tests
+
+Codecov merges per-flag sessions (`unit`, `functional`, …) into the project
+number. Flags with `carryforward: true` reuse the last uploaded session — and
+when that session **expires** (no fresh upload within the retention window),
+the flag silently contributes 0/0 lines and the project number collapses to
+the remaining flags. The repo then *looks* like it lost coverage with no code
+change.
+
+Before writing tests to close a coverage gap, verify each flag is alive:
+
+```bash
+# 0/0 lines => the flag expired; the gap is a reporting artifact
+curl -s "https://api.codecov.io/api/v2/github/<org>/repos/<repo>/report/?flag=functional" \
+  | jq '.totals | {coverage, hits, lines}'
+```
+
+Restore an expired flag by re-running the upload path — in the standard
+Netresearch split (PR runs = parallel, no coverage; `schedule`/
+`workflow_dispatch` = serial + Xdebug + upload) that is one dispatch:
+
+```bash
+gh workflow run ci.yml --ref main   # ~15 min; matrix cells upload the flag
+```
+
+Real case: a "coverage >= 80%" goal opened against a repo reading 68.6% —
+the functional flag had expired; the true full-suite number was 86%. The
+dispatch met the goal; the phantom gap would have cost days of test-writing.
+Corollary: measure locally only for per-file gap analysis — a full functional
+suite under Xdebug on WSL2 projects to hours; the CI dispatch is the fast path.
+
+### Stale coverage cache fails the suite with zero failing tests
+
+PHPUnit's static-analysis cache (`.Build/cache/phpunit/code-coverage/`) is
+written by the container user of whoever ran coverage last. A later run under
+a different uid gets `file_put_contents(): Permission denied` **warnings** —
+and with `failOnWarning="true"` the suite exits 1 with 0 failures/errors.
+Remove the cache dir before coverage runs when containers/users alternate:
+
+```bash
+rm -rf .Build/cache/phpunit/code-coverage
+```
+
 ## Resources
 
 - [GitHub Actions Documentation](https://docs.github.com/actions)

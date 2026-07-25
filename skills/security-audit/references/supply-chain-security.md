@@ -739,6 +739,20 @@ permissions:[\s\S]*?contents:\s+write(?!.*security-events)
 | Low | No SLSA Level 3 provenance | 1 month |
 | Low | No reproducible build verification | 1 month |
 
+## Confirm real exposure in the deployed artifact
+
+An advisory version range is a *candidate*, not a verdict. Before reporting a component as affected, confirm the vulnerable code is **actually present at a vulnerable version in the artifact that ships** — inventory the real container image, JARs, or lockfile, not just the spec:
+
+- **False positives:** a bundled library may already be a patched version, a transitive dependency may be absent, or the named component (e.g. Struts) may not be in the build at all. A per-component version check removes these.
+- **False negatives:** vendor advisories often list only *currently-supported* version ranges, so an older, frozen build below the listed floor can still ship the same vulnerable component (a scan-window artifact). Check the actual bundled version, not the advisory's lower bound.
+- **Reachability:** confirm the vulnerable code path is reachable in *this* deployment (entrypoint/feature enabled, pre-auth vs authenticated) before ranking severity.
+
+This routinely shrinks a long advisory-range list to a much smaller, accurate exposure set — and can reverse wrong conclusions.
+
+## Remediation when you can't (or won't) upgrade
+
+"Upgrade the product" / "migrate off it" is not the only remediation, and is not always available or wanted. For an EOL/frozen product an org has *deliberately decided to keep*, the maintenance model can be **in-place dependency patching** — replace the vulnerable bundled library with a patched, binary-compatible version (verified against the shipped artifact + a boot test, pinned by checksum) plus compensating controls at the edge (rate limits, request normalisation, WAF). Do not reflexively recommend migration/upgrade as "the real fix": confirm the org's strategic stance first, and record a deliberate "stay-frozen" decision so it is not re-litigated every cycle.
+
 ## Related References
 
 - `ci-security-pipeline.md` - CI tools that implement these practices

@@ -191,7 +191,7 @@ database:
 - Latest features (+40% performance vs 10.11)
 - Forward compatibility testing
 
-**For detailed rationale**, see: `references/0002-mariadb-default-with-database-alternatives.md`
+**For detailed rationale**, see: `docs/adr/0002-mariadb-default-with-database-alternatives.md`
 
 ### XDebug Setup
 
@@ -277,7 +277,7 @@ Valkey is wire-protocol compatible with Redis but offers:
 
 **Configuration**: Both use identical TYPO3 configuration. Add cache backend to `AdditionalConfiguration.php` (see `.ddev/config.redis.php.example`)
 
-**For detailed rationale**, see: `references/0001-valkey-default-with-redis-alternative.md`
+**For detailed rationale**, see: `docs/adr/0001-valkey-default-with-redis-alternative.md`
 
 #### MailPit (Email Testing)
 
@@ -313,6 +313,75 @@ docker logs -f ddev-{{DDEV_SITENAME}}-ofelia
 
 **DDEV Naming**: Uses `docker-compose.*.yaml` naming (DDEV v1.24.8 requirement, not Compose v2 standard)
 **No Version Field**: All service files omit `version:` declaration per Compose v2 spec
+
+#### Ollama (Local LLM Inference)
+
+Run a local LLM (e.g. for extensions integrating Ollama) as a ddev service.
+This skill does not ship an Ollama compose template; the steps below apply
+once you have added your own Ollama service (a `docker-compose.*.yaml` with an
+`ollama` service). The container name follows ddev's convention:
+`ddev-{{DDEV_SITENAME}}-ollama`.
+
+**GPU passthrough on WSL2 — the container needs the GPU explicitly**
+
+An Ollama container will silently run **100% on CPU** (slow, and it may report
+a bogus tiny "device") even on a host with a capable NVIDIA GPU, if the
+container was never granted the GPU. The Windows driver being fine and
+`nvidia-smi` working *inside WSL* is **not** enough — Docker needs the NVIDIA
+Container Toolkit **and** the service must request the device.
+
+```bash
+# 1. Host (WSL): install the NVIDIA Container Toolkit, then
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+# Verify Docker can pass the GPU through:
+docker run --rm --gpus all ubuntu nvidia-smi   # must list your GPU
+```
+
+```yaml
+# 2. Grant the ddev Ollama service the GPU in a LOCAL, GITIGNORED override
+#    (.ddev/docker-compose.ollama-gpu.yaml) — never commit it, a hardcoded
+#    nvidia reservation breaks `ddev start` for teammates without a GPU:
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+```
+
+```bash
+# 3. ddev restart, then verify offload. `ollama ps` is the authoritative check:
+docker exec ddev-{{DDEV_SITENAME}}-ollama ollama ps   # PROCESSOR column shows GPU, not CPU
+# Optional: nvidia-smi (the NVIDIA Container Toolkit injects it into the
+# container when the GPU is attached; may be absent in a stripped image):
+docker exec ddev-{{DDEV_SITENAME}}-ollama nvidia-smi
+```
+
+Keep the override untracked (add it to `.git/info/exclude` or `.gitignore`).
+Diagnosis tell: Ollama's server log shows `offloaded 0/N layers to GPU` and
+`model weights device=CPU` when the reservation is missing.
+
+**Model choice for a shared/CI default:** pick a small but genuinely
+tool-capable model (a sub-1B model is a plumbing-smoke model, not reliably
+tool-capable). A ~4B model is fast on CPU too; reserve large models for hosts
+that actually have the VRAM.
+
+**Idempotent seed SQL** (re-running a seed on an existing dev DB must not
+corrupt state):
+
+- Clear the provider's existing default flag **before** inserting the new
+  default row, so you never end up with two `is_default = 1` rows that make
+  "default" selection ambiguous by insertion order:
+  ```sql
+  UPDATE tx_ext_model SET is_default = 0 WHERE provider_uid = @p AND deleted = 0;
+  ```
+- Put the **mutable** columns in `ON DUPLICATE KEY UPDATE` (capabilities,
+  timeouts, `is_default`, …) — otherwise a re-seed of an existing row keeps
+  stale metadata.
+- Filter `deleted = 0` in every lookup so a soft-deleted row can't resolve.
 
 #### Shell Aliases
 

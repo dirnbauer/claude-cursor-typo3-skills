@@ -1,5 +1,7 @@
 # TYPO3 v14 Removals & Deprecations — Conformance Reference
 
+**Canonical owner:** this file is the canonical v13/v14 breaking-change fact catalog. Other skills (`typo3-extension-upgrade`, `typo3-upgrade-effort-model`, etc.) cross-link here instead of restating the fact lists — see the fact-ownership rule in `skill-repo-skill` `skills/skill-repo/references/skill-quality.md` ("Fact and trigger ownership"). When a new TYPO3 release changes these facts, edit only this file.
+
 **Sources:** TYPO3 Core Changelog [14.0](https://docs.typo3.org/c/typo3/cms-core/main/en-us/Changelog/14.0/Index.html) · [14.1](https://docs.typo3.org/c/typo3/cms-core/main/en-us/Changelog/14.1/Index.html) · [14.2](https://docs.typo3.org/c/typo3/cms-core/main/en-us/Changelog/14.2/Index.html) · [14.3](https://docs.typo3.org/c/typo3/cms-core/main/en-us/Changelog/14.3/Index.html)
 **Purpose:** Score extensions against v14 removals (must fix now) and v14 deprecations (must fix before v15).
 **Release context:** v14.3 LTS released 2026-04-21. v14.0 landed all 98 breaking changes; v14.1/14.2/14.3 are feature-freeze / stabilization.

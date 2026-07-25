@@ -18,6 +18,7 @@ A Python script can automate badge data submission using session cookies:
 Usage:
     BADGE_COOKIE='...' python3 submit-badge.py [--dry-run] [--level LEVEL]
 """
+
 import json
 import os
 import re
@@ -27,18 +28,16 @@ import http.cookiejar
 import urllib.parse
 import urllib.request
 
-COOKIE_NAME = '_BadgeApp_session'
+COOKIE_NAME = "_BadgeApp_session"
 PROJECT_ID = 12345  # Replace with your project ID
-BASE_URL = 'https://www.bestpractices.dev'
+BASE_URL = "https://www.bestpractices.dev"
 
 AUTH_TOKEN_PATTERN = re.compile(
     r'<input type="hidden" name="authenticity_token" value="([^"]+)"'
 )
-CSRF_TOKEN_PATTERN = re.compile(
-    r'<meta name="csrf-token" content="([^"]+)"'
-)
+CSRF_TOKEN_PATTERN = re.compile(r'<meta name="csrf-token" content="([^"]+)"')
 
-LEVELS = ['passing', 'silver', 'gold', 'baseline-1', 'baseline-2', 'baseline-3']
+LEVELS = ["passing", "silver", "gold", "baseline-1", "baseline-2", "baseline-3"]
 ```
 
 ### Authentication
@@ -49,12 +48,12 @@ LEVELS = ['passing', 'silver', 'gold', 'baseline-1', 'baseline-2', 'baseline-3']
 
 ```python
 # RECOMMENDED: Read from file to avoid shell quoting issues with special chars
-cookie_file = '/tmp/badge-cookie.txt'
+cookie_file = os.path.expanduser("~/.badge-cookie.txt")
 if os.path.exists(cookie_file):
     with open(cookie_file) as f:
         cookie = f.read().strip()
 else:
-    cookie = os.environ.get('BADGE_COOKIE', '')
+    cookie = os.environ.get("BADGE_COOKIE", "")
 ```
 
 ### Submission Flow
@@ -85,13 +84,13 @@ often contain `+`, `/`, `=`, and other characters that break shell quoting.
 
 ```python
 # BEST - read from file (no shell quoting issues)
-cookie = open('/tmp/badge-cookie.txt').read().strip()
+cookie = open(os.path.expanduser("~/.badge-cookie.txt")).read().strip()
 
 # OK - environment variable (beware of shell quoting)
-cookie = os.environ.get('BADGE_COOKIE', '')
+cookie = os.environ.get("BADGE_COOKIE", "")
 
 # WRONG - URL decoding breaks session authentication
-cookie = urllib.parse.unquote(os.environ.get('BADGE_COOKIE', ''))
+cookie = urllib.parse.unquote(os.environ.get("BADGE_COOKIE", ""))
 ```
 
 **Symptom**: Writes appear to succeed (302 redirect) but data is silently not persisted.
@@ -177,19 +176,30 @@ def make_opener(cookie):
     """Create urllib opener with cookie jar and no-redirect handling."""
     cj = http.cookiejar.CookieJar()
     c = http.cookiejar.Cookie(
-        version=0, name='_BadgeApp_session', value=cookie,
-        port=None, port_specified=False,
-        domain='www.bestpractices.dev', domain_specified=True,
+        version=0,
+        name="_BadgeApp_session",
+        value=cookie,
+        port=None,
+        port_specified=False,
+        domain="www.bestpractices.dev",
+        domain_specified=True,
         domain_initial_dot=False,
-        path='/', path_specified=True,
-        secure=True, expires=None, discard=True,
-        comment=None, comment_url=None, rest={}, rfc2109=False,
+        path="/",
+        path_specified=True,
+        secure=True,
+        expires=None,
+        discard=True,
+        comment=None,
+        comment_url=None,
+        rest={},
+        rfc2109=False,
     )
     cj.set_cookie(c)
 
     class NoRedirectHandler(urllib.request.HTTPErrorProcessor):
         def http_response(self, request, response):
             return response
+
         https_response = http_response
 
     return urllib.request.build_opener(
@@ -240,7 +250,9 @@ the badge percentage:
 ```python
 # After fetching the edit page HTML:
 all_enough = re.findall(r'<img[^>]*id="(\w+)_enough"[^>]*alt="([^"]+)"', html)
-not_enough = [(name, alt) for name, alt in all_enough if 'not' in alt.lower() or 'Not' in alt]
+not_enough = [
+    (name, alt) for name, alt in all_enough if "not" in alt.lower() or "Not" in alt
+]
 
 for name, alt in not_enough:
     print(f"  {name}: {alt}")
@@ -292,22 +304,22 @@ For submitting badge data across multiple projects, use a configuration dict:
 
 ```python
 PROJECTS = {
-    'project-name': {
-        'id': 12345,
-        'levels': {
-            'passing': '/path/to/badge-data-passing.json',
-            'silver': '/path/to/badge-data-silver.json',
-            'gold': '/path/to/badge-data-gold.json',
-        }
+    "project-name": {
+        "id": 12345,
+        "levels": {
+            "passing": "/path/to/badge-data-passing.json",
+            "silver": "/path/to/badge-data-silver.json",
+            "gold": "/path/to/badge-data-gold.json",
+        },
     },
     # ... more projects
 }
 
 # Submit all
 for name, config in PROJECTS.items():
-    for level, data_file in config['levels'].items():
+    for level, data_file in config["levels"].items():
         if os.path.exists(data_file):
-            submit_level(opener, config['id'], level, data_file)
+            submit_level(opener, config["id"], level, data_file)
             time.sleep(3)
 ```
 
@@ -361,11 +373,8 @@ To verify specific criteria are truly accepted (not just "Met" in API):
 ```python
 # Fetch edit page and check _enough indicators
 html = fetch_edit_page(opener, project_id, level)
-not_enough = re.findall(
-    r'<img[^>]*id="(\w+)_enough"[^>]*alt="([^"]+)"',
-    html
-)
-blockers = [(n, a) for n, a in not_enough if 'not' in a.lower()]
+not_enough = re.findall(r'<img[^>]*id="(\w+)_enough"[^>]*alt="([^"]+)"', html)
+blockers = [(n, a) for n, a in not_enough if "not" in a.lower()]
 ```
 
 ---

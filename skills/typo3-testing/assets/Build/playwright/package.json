@@ -7,7 +7,6 @@
     "npm": ">=11.5.2"
   },
   "scripts": {
-    "test:e2e": "playwright test",
     "playwright:install": "playwright install",
     "playwright:open": "playwright test --ui --ignore-https-errors",
     "playwright:run": "playwright test",

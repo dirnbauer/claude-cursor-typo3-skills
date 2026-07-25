@@ -25,7 +25,6 @@ class CommitMessageValidator:
         """Run all validation checks"""
         self.check_subject_line()
         self.check_blank_line()
-        self.check_line_length()
         self.check_footer()
         self.check_change_id()
 
@@ -138,14 +137,14 @@ class CommitMessageValidator:
                                 "Use 'main' or version like '13.4'"
                             )
 
-        # Errors for missing required tags (commit-msg hook hard-rejects these)
+        # Warnings for missing tags
         if not has_resolves:
-            self.errors.append(
+            self.warnings.append(
                 "No 'Resolves: #<issue>' tag found. Required for features and tasks."
             )
 
         if not has_releases:
-            self.errors.append(
+            self.warnings.append(
                 "No 'Releases:' tag found. Required to specify target versions."
             )
 

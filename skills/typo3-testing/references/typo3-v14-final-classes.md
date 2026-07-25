@@ -463,6 +463,50 @@ namespace Vendor\Extension\Tests\Fixtures;
 class SiteConfigurationLoadedEvent { } // Copy of TYPO3's class
 ```
 
+## Cross-Version `readonly` Trap (13.4 vs 14) — a fixture subclass can fatal on one matrix leg
+
+`readonly` is applied to different classes in different core versions. A class
+that is a plain `class` on 13.4 becomes `readonly class` on 14 (and vice versa
+for some). This breaks the common "subclass the concrete framework class and
+override one method" test-double trick across a `^13.4 || ^14.3` matrix,
+because PHP forbids a `readonly` child extending a non-`readonly` parent **and**
+a non-`readonly` child extending a `readonly` parent:
+
+```php
+// Test double subclassing the concrete class:
+final readonly class FakeRequestFactory extends RequestFactory { /* ... */ }
+```
+
+`TYPO3\CMS\Core\Http\RequestFactory` is `readonly` on 14.x but a plain `class`
+on 13.4. So this fixture:
+
+- compiles on 14.x, and
+- **fatals at parse time on 13.4** —
+  `Readonly class ...FakeRequestFactory cannot extend non-readonly class ...RequestFactory`.
+
+The failure is invisible locally if you only run one PHP/TYPO3 version; it only
+appears on the 13.4 legs of the CI matrix (and it's a *fatal*, so PHPStan/unit
+locally on 8.4/14 stay green). Two independent gotchas compound it: PHPUnit also
+cannot mock a `readonly` class at all (same `ClassIsFinalException` family), so
+"just mock it" is not an escape either.
+
+**Fix — don't subclass the concrete class.** Introduce a one-method interface
+your production code depends on, wrap the concrete factory in a tiny production
+implementation, and have the test double implement the interface directly:
+
+```php
+interface HttpFetcherInterface { public function get(string $url): \Psr\Http\Message\ResponseInterface; }
+
+final readonly class HttpFetcher implements HttpFetcherInterface { /* wraps RequestFactory */ }
+
+// Test double: implements the interface, extends nothing version-dependent.
+final class FakeHttpFetcher implements HttpFetcherInterface { /* records + replays */ }
+```
+
+The interface is version-neutral, so the double compiles on every matrix cell.
+This is the same "Interface Extraction" pattern above, applied specifically
+because the parent's `readonly`-ness is not stable across the supported versions.
+
 ## Summary
 
 1. **Interface Extraction**: For dependencies you control that are final
@@ -471,3 +515,4 @@ class SiteConfigurationLoadedEvent { } // Copy of TYPO3's class
 4. **Reflection for Controllers**: Use `newInstanceWithoutConstructor()` for final framework deps in controllers
 5. **`dg/bypass-finals`**: For your own `final` production classes that you want to mock without extracting an interface
 6. **Zero Skipped Tests**: Every test should run - reorganize if needed
+7. **Cross-version `readonly`**: Never subclass a concrete core class whose `readonly`-ness differs across the supported versions — a fixture subclass fatals on the leg where parent and child disagree; extract an interface instead

@@ -330,11 +330,11 @@
   {
     "directory": "context7",
     "skill_name": "context7",
-    "description": "Use when looking up library documentation, API references, framework patterns, or code examples for ANY library (React, Next.js, Vue, Django, Laravel, etc.). Fetches current docs via Context7 REST API. Triggers on: how to use library, API docs, framework pattern, import usage, library example.",
+    "description": "Use when looking up library documentation, API references, framework patterns, or code examples for ANY library (React, Next.js, Vue, Django, Laravel, etc.) and the Context7 MCP server is unavailable or not configured. Fetches the same current docs directly via the Context7 REST API as a fallback. Triggers on: how to use library, API docs, framework pattern, import usage, library example.",
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/context7-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/context7/SKILL.md",
-    "line_count": 102,
+    "line_count": 96,
     "frontmatter_keys": [
       "name",
       "description"
@@ -569,7 +569,7 @@
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/enterprise-readiness-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/enterprise-readiness/SKILL.md",
-    "line_count": 84,
+    "line_count": 83,
     "frontmatter_keys": [
       "name",
       "description"
@@ -1368,11 +1368,11 @@
   {
     "directory": "security-audit",
     "skill_name": "security-audit",
-    "description": "Use when conducting security assessments \\u2014 OWASP Top 10 / API / LLM, CWE Top 25, CVSS scoring \\u2014 auditing PHP/TYPO3 (v14.3 LTS: #109585, HashService removal, Authorize/RateLimit), APIs, frontend, Terraform/K8s/Docker IaC, AWS/Azure/GCP cloud, AI agent configs, or scanning dependencies.",
+    "description": "Use when conducting security assessments \\u2014 OWASP Top 10 / API / LLM, CWE Top 25, CVSS scoring \\u2014 auditing PHP/TYPO3, APIs, frontend, Terraform/K8s/Docker IaC, AWS cloud, AI agent configs, or scanning dependencies.",
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/security-audit-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/security-audit/SKILL.md",
-    "line_count": 105,
+    "line_count": 75,
     "frontmatter_keys": [
       "name",
       "description"
@@ -1669,7 +1669,7 @@
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/typo3-conformance-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-conformance/SKILL.md",
-    "line_count": 96,
+    "line_count": 97,
     "frontmatter_keys": [
       "name",
       "description"
@@ -1771,7 +1771,7 @@
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/typo3-extension-upgrade-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-extension-upgrade/SKILL.md",
-    "line_count": 93,
+    "line_count": 95,
     "frontmatter_keys": [
       "name",
       "description"
@@ -2031,7 +2031,7 @@
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/typo3-testing-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-testing/SKILL.md",
-    "line_count": 106,
+    "line_count": 107,
     "frontmatter_keys": [
       "name",
       "description"
@@ -2103,7 +2103,7 @@
     "source_owner": "Netresearch",
     "source_url": "https://github.com/netresearch/typo3-vite-skill",
     "file_path": "/Users/dirnbauer/projects/webconsulting-skills/skills/typo3-vite/SKILL.md",
-    "line_count": 61,
+    "line_count": 65,
     "frontmatter_keys": [
       "name",
       "description"

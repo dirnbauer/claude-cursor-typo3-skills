@@ -28,10 +28,10 @@ jobs:
       matrix:
         php: ['8.2', '8.3', '8.4']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
@@ -43,10 +43,10 @@ jobs:
     name: Code Style (PHP-CS-Fixer)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.3'
           tools: composer:v2
@@ -58,10 +58,10 @@ jobs:
     name: PHPStan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.3'
           tools: composer:v2
@@ -69,20 +69,20 @@ jobs:
       - name: Run PHPStan
         run: Build/Scripts/runTests.sh -s phpstan
 
-  cgl:
-    name: CGL (dry-run)
+  rector:
+    name: Rector (dry-run)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.3'
           tools: composer:v2
 
-      - name: Run CGL dry-run
-        run: Build/Scripts/runTests.sh -s cgl -n
+      - name: Run Rector dry-run
+        run: Build/Scripts/runTests.sh -s rector -n
 
   # ==========================================================================
   # Unit Tests
@@ -97,24 +97,24 @@ jobs:
         php: ['8.2', '8.3', '8.4']
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: ${{ matrix.php }}
           coverage: xdebug
           tools: composer:v2
 
       - name: Run unit tests with coverage
-        run: Build/Scripts/runTests.sh -p ${{ matrix.php }} -s unitCoverage
+        run: Build/Scripts/runTests.sh -p ${{ matrix.php }} -s unit -x
 
       - name: Upload coverage to Codecov
         if: matrix.php == '8.3'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: .Build/coverage/unit.xml
+          files: .Build/coverage/clover.xml
           flags: unittests
           fail_ci_if_error: false
           verbose: true
@@ -142,10 +142,10 @@ jobs:
             typo3: '13'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: ${{ matrix.php }}
           extensions: pdo_sqlite
@@ -162,17 +162,16 @@ jobs:
   #   name: Architecture Tests (PHPat)
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
   #
   #     - name: Setup PHP
-  #       uses: shivammathur/setup-php@v2
+  #       uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
   #       with:
   #         php-version: '8.3'
   #         tools: composer:v2
   #
-  #     # PHPat rules run as a PHPStan extension, not a separate suite
   #     - name: Run architecture tests
-  #       run: Build/Scripts/runTests.sh -s phpstan
+  #       run: Build/Scripts/runTests.sh -s architecture
 
   # ==========================================================================
   # Mutation Testing (Optional - runs on schedule or manual trigger)
@@ -184,10 +183,10 @@ jobs:
   #   # Only run on main branch or manual trigger
   #   if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
   #
   #     - name: Setup PHP
-  #       uses: shivammathur/setup-php@v2
+  #       uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
   #       with:
   #         php-version: '8.3'
   #         coverage: pcov
@@ -197,7 +196,7 @@ jobs:
   #       run: Build/Scripts/runTests.sh -s mutation
   #
   #     - name: Upload mutation report
-  #       uses: actions/upload-artifact@v4
+  #       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
   #       with:
   #         name: mutation-report
   #         path: .Build/infection/

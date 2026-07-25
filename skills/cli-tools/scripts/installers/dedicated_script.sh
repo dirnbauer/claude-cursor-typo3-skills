@@ -4,6 +4,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$DIR/lib/root.sh"
 
 TOOL="${1:-}"
 if [ -z "$TOOL" ]; then
@@ -11,7 +12,7 @@ if [ -z "$TOOL" ]; then
   exit 1
 fi
 
-CATALOG_FILE="$DIR/../catalog/$TOOL.json"
+CATALOG_FILE="$CATALOG_DIR/$TOOL.json"
 if [ ! -f "$CATALOG_FILE" ]; then
   echo "Error: Catalog file not found: $CATALOG_FILE" >&2
   exit 1

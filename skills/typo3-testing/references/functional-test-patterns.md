@@ -50,6 +50,30 @@ protected function setUp(): void
 }
 ```
 
+### `Site::getBase()` with `baseVariants` is functional-only
+
+Code that resolves a site base URL — egress/SSRF policy, probe-URL builders,
+anything calling `$site->getBase()` — cannot be **unit**-tested when the site
+carries `baseVariants`. `baseVariants` are evaluated through TYPO3's
+ExpressionLanguage provider, which needs the DI/provider bootstrap the unit
+`UnitTestCase` does not set up; a plain unit test throws
+`ArgumentCountError` from `ProviderConfigurationLoader` the moment `getBase()`
+touches a variant.
+
+Test such code as **functional** — write the site YAML with a `baseVariants` block
+(extending the site-config example above) so ExpressionLanguage is wired:
+
+```yaml
+rootPageId: 1
+base: '/'
+baseVariants:
+  -
+    base: 'https://staging.example.com/'
+    condition: 'applicationContext == "Production/Staging"'
+```
+
+Reserve unit tests for site code that never resolves a variant base.
+
 ## Disabling Session for Context Fixtures
 
 When testing contexts that don't need session:
@@ -234,3 +258,53 @@ public function testWithPageInformation(): void
     self::assertSame(1, $result->getPageId());
 }
 ```
+
+## Backend controller & AJAX gotchas (found while functional-testing controllers)
+
+Three traps that surface when functional-testing TYPO3 backend controllers and
+running the suite locally:
+
+### `-s functional` hangs on WSL2 under Docker contention
+
+The full functional suite can hang indefinitely (many minutes, **zero output** =
+a setup hang, not a test failure) when it competes for the Docker daemon with a
+running `ddev` project and/or Playwright. Run **targeted files** locally and
+treat **CI functional as authoritative**:
+
+```bash
+# Not the whole suite while ddev/Playwright are busy:
+./Build/Scripts/runTests.sh -s functional Tests/Functional/Controller/Backend/FooControllerTest.php
+```
+
+### `JsonResponse` 500s on non-UTF-8 and takes no encode flags
+
+TYPO3's `\TYPO3\CMS\Core\Http\JsonResponse` encodes with `JSON_THROW_ON_ERROR`
+and accepts **no** encoding-options argument. An AJAX action that echoes
+untrusted bytes back to the browser — tool output, log lines, injected text —
+throws an uncaught exception on a single malformed byte, returning an **HTML 500
+page** the frontend can't parse (it surfaces as a bare "Unknown error"). Build
+the response via the injected PSR-17 factory so bad bytes degrade instead of
+throwing (prefer the factory over `new \TYPO3\CMS\Core\Http\Response()` — that
+class is not public API):
+
+```php
+// $this->responseFactory is an injected Psr\Http\Message\ResponseFactoryInterface
+$json = json_encode($data, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+$response = $this->responseFactory->createResponse($status)
+    ->withHeader('Content-Type', 'application/json; charset=utf-8');
+$response->getBody()->write($json);
+$response->getBody()->rewind(); // else getContents() in an emitter/middleware sees an empty stream
+return $response;
+```
+
+A functional test for this: run the action with a scripted provider/model whose
+response carries `"\xFF\xFE"`, and assert the action returns `200` with
+decodable JSON — not that it throws.
+
+### `jsonResponse()` is a FATAL name clash on an Extbase `ActionController`
+
+`ActionController` already declares `protected function jsonResponse(?string $json = null)`.
+A helper named `jsonResponse` with a narrower visibility or different signature
+is a **fatal** "access level must be …" / signature error at class-load time —
+not a lint warning. Name controller JSON helpers something else (`respondJson`,
+`streamLine`, …).

@@ -6,6 +6,7 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source reconciliation libraries
+. "$DIR/lib/root.sh"
 . "$DIR/lib/reconcile.sh"
 
 TOOL="${1:-}"
@@ -17,12 +18,12 @@ if [ -z "$TOOL" ]; then
   exit 1
 fi
 
-CATALOG_FILE="$DIR/../catalog/$TOOL.json"
+CATALOG_FILE="$CATALOG_DIR/$TOOL.json"
 
 # Check if tool has catalog entry
 if [ ! -f "$CATALOG_FILE" ]; then
   echo "[$TOOL] Error: No catalog entry found" >&2
-  echo "[$TOOL] Available tools: $(find "$DIR/../catalog" -name '*.json' -exec basename {} .json \; | tr '\n' ' ')" >&2
+  echo "[$TOOL] Available tools: $(find "$CATALOG_DIR" -name '*.json' -exec basename {} .json \; | tr '\n' ' ')" >&2
   exit 1
 fi
 

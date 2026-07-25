@@ -56,7 +56,6 @@ Required coverage: CI, CodeQL, Scorecard, dependency review, composer audit, SBO
 | `references/mandatory-requirements.md` | Checklist |
 | `references/ci-patterns.md` | CI/CD, hooks |
 | `references/code-review.md` | PR quality |
-| `references/documentation.md` | ADRs, changelogs |
 | `references/slsa-provenance.md` | SLSA Level 3 |
 | `references/signed-releases.md` | Cosign/GPG |
 | `references/openssf-badge-silver.md` | Silver |

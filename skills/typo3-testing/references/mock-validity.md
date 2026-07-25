@@ -210,6 +210,30 @@ $mock->expects(self::exactly(2))
     });
 ```
 
+### Gotcha: `->with()` Only Constrains the Arguments You Pass
+
+`->with($a)` checks **only** the first argument; any further arguments in the actual
+call are unconstrained. So when you add a parameter to a method, existing
+single-argument expectations keep passing silently — they neither fail nor verify
+the new argument:
+
+```php
+// Production change:
+//   getCacheLifetime(Context $c)  ->  getCacheLifetime(Context $c, ?int $pageId)
+
+// This existing expectation still PASSES after the change, even though the call
+// is now getCacheLifetime($context, 42) — the extra arg is not checked:
+$mock->expects(self::once())->method('getCacheLifetime')->with($context);
+```
+
+Consequences:
+
+- Widening a signature (N -> N+1 args) will **not** break `->with()` assertions that
+  only pin the original args — convenient, but a green suite does not prove the new
+  argument is exercised.
+- To verify the new argument, pin it explicitly: `->with($context, 42)` (or
+  `self::anything()` for positions you intentionally leave open).
+
 ## Adapter Pattern Testing
 
 When your extension wraps a version-specific third-party API behind an adapter interface, test through the adapter interface rather than creating complex version-specific mock setups.

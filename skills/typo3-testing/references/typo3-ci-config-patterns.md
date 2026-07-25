@@ -112,11 +112,59 @@ strategy:
 - **Cache interface strict-typing (#107315)**: test doubles for
   `BackendInterface`/`FrontendInterface` must match the new typed
   signatures.
-- **FAL strict-typing (#106427)**: FAL method signatures gained strict
-  return types, so test doubles for `File`/`Folder` must match the new
-  typed signatures. (`ResourceInterface::getIdentifier(): string` still
-  exists — it was not removed.)
+- **FAL strict-typing (#106427)**: `AbstractFile::getIdentifier()` is
+  gone; test doubles for `File`/`Folder` must use concrete methods.
 - **Extbase argument strict-typing (#107777)**: `Argument` now enforces
   strict types; replace `setValue(mixed)` mocks.
 - See `typo3-v14-final-classes.md` for the full list of v14 `final` classes
   that cannot be mocked (use interface-based doubles instead).
+
+## 6. PHPStan across the supported-version matrix
+
+### Verify every supported TYPO3 version locally — not just the highest installed
+
+A green PHPStan run on the highest installed TYPO3 version can still fail CI on a
+lower one. Class existence and deprecation results differ per version, e.g.
+`TYPO3\CMS\Backend\Template\Components\ComponentFactory` exists only on **v14+**,
+so referencing it produces "unknown class" / "returns mixed" errors on v12/v13;
+conversely the `make*` docheader API (`MenuRegistry::makeMenu()`,
+`Menu::makeMenuItem()`, `ButtonBar::makeLinkButton()`) is deprecated on **v14**
+but not on v12/v13. A single-version local run sees only one side.
+
+Before pushing, re-resolve to each supported version and re-run PHPStan — no
+composer.json edit needed, `--with` applies a temporary constraint:
+
+```bash
+for V in '^12.4' '^13.4' '^14.3'; do
+  composer update -W \
+    --with "typo3/cms-core:$V" --with "typo3/cms-backend:$V" --with "typo3/cms-setup:$V" \
+    --no-interaction
+  composer dump-autoload -o
+  composer ci:test:php:phpstan || echo "PHPStan FAILED on TYPO3 $V"
+done
+```
+
+### Inline `@phpstan-ignore` is rejected — use neon `ignoreErrors`
+
+`ergebnis/phpstan-rules` (in the shared `typo3-ci-workflows` config) **bans inline
+`@phpstan-ignore` / `@phpstan-ignore-next-line`** — CI fails with *"Errors reported
+by phpstan/phpstan should not be ignored via @phpstan-ignore, fix the error or use
+the baseline instead."* This rule is NOT active in a bare local `Build/phpstan.neon`
+run, so it only surfaces in CI. Put suppressions in the neon `ignoreErrors` block
+instead, scoped by `path` and kept SPECIFIC (not a blanket `#Call to deprecated
+method#`). For cross-version cases set `reportUnmatched: false` so an entry that
+only applies to one TYPO3 version does not error on the others:
+
+```yaml
+parameters:
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # v14 only: the v12/v13 fallback docheader make* calls are deprecated there
+        - message: '#Call to deprecated method (makeMenu|makeMenuItem|makeLinkButton)\(\)#'
+          path: %currentWorkingDirectory%/Classes/Controller/MyModuleController.php
+          reportUnmatched: false
+        # v12/v13 only: ComponentFactory does not exist there
+        - message: '#TYPO3\\CMS\\Backend\\Template\\Components\\ComponentFactory#'
+          path: %currentWorkingDirectory%/Classes/Controller/MyModuleController.php
+          reportUnmatched: false
+```

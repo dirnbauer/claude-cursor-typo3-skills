@@ -229,10 +229,12 @@ func TestSomething(t *testing.T) {
 # Python assertions are enabled by default
 # They're disabled with python -O (optimize) flag
 
+
 def process(data):
     assert data is not None, "data cannot be None"
     assert len(data) > 0, "data cannot be empty"
     # ...
+
 
 # pytest assertions
 def test_something():

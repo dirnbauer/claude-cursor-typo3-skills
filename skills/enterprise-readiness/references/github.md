@@ -473,6 +473,7 @@ GitHub API can return transient errors (502, 503, 504) during high load. Scripts
 import time
 import requests
 
+
 def github_request(url: str, token: str, max_retries: int = 3) -> dict | list:
     """Make authenticated GitHub API request with retry logic."""
     headers = {
@@ -487,8 +488,10 @@ def github_request(url: str, token: str, max_retries: int = 3) -> dict | list:
 
             # Retry on transient errors
             if response.status_code in (429, 502, 503, 504):
-                retry_after = int(response.headers.get("Retry-After", 2 ** attempt))
-                print(f"Retry {attempt + 1}/{max_retries}: {response.status_code}, waiting {retry_after}s")
+                retry_after = int(response.headers.get("Retry-After", 2**attempt))
+                print(
+                    f"Retry {attempt + 1}/{max_retries}: {response.status_code}, waiting {retry_after}s"
+                )
                 time.sleep(retry_after)
                 continue
 
@@ -497,7 +500,7 @@ def github_request(url: str, token: str, max_retries: int = 3) -> dict | list:
 
         except requests.exceptions.RequestException as e:
             if attempt < max_retries - 1:
-                wait_time = 2 ** attempt
+                wait_time = 2**attempt
                 print(f"Retry {attempt + 1}/{max_retries}: {e}, waiting {wait_time}s")
                 time.sleep(wait_time)
             else:

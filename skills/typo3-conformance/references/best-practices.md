@@ -95,7 +95,7 @@ my_extension/
 
 ## Best Practices by Category
 
-### 1. Dependency Management
+### Dependency Management
 
 **composer.json Best Practices:**
 
@@ -154,7 +154,7 @@ my_extension/
 }
 ```
 
-### 2. Code Quality Tools
+### Code Quality Tools
 
 **.php-cs-fixer.dist.php:**
 
@@ -312,7 +312,7 @@ $dataHandler = $this->get(DataHandler::class);
 $resourceFactory = $this->get(ResourceFactory::class);
 ```
 
-### 3. Service Configuration
+### Service Configuration
 
 **Configuration/Services.yaml:**
 
@@ -405,7 +405,7 @@ Add a functional test that loads the optional system extension
 `FunctionalTestCase` directly so a container-compile failure surfaces as a test
 failure rather than being swallowed into a skip.
 
-### 4. Backend Module Configuration
+### Backend Module Configuration
 
 **Configuration/Backend/Modules.php:**
 
@@ -445,7 +445,7 @@ $source = (new \TYPO3\CMS\Core\Information\Typo3Version())->getMajorVersion() >=
     : 'EXT:my_extension/Resources/Public/Icons/Module.legacy.svg'; // colored tile
 ```
 
-### 5. Testing Infrastructure
+### Testing Infrastructure
 
 **Build/Scripts/runTests.sh:**
 
@@ -474,7 +474,7 @@ if [ "$1" = "all" ]; then
 fi
 ```
 
-### 6. CI/CD Configuration
+### CI/CD Configuration
 
 **.github/workflows/ci.yml** (OpenSSF Scorecard-optimized):
 
@@ -601,7 +601,7 @@ Every TYPO3 extension should have these additional workflows:
 | Packaging | Requires GitHub Packages, not Packagist/TER | -1 |
 | Maintained | Based on recent commit frequency — penalizes stable projects | 0-10 |
 
-### 7. Documentation Standards
+### Documentation Standards
 
 **Documentation/Index.rst:**
 
@@ -706,275 +706,13 @@ Documentation/
 
 **Reference:** [TYPO3 tea extension](https://github.com/TYPO3BestPractices/tea) - exemplary documentation structure
 
-### 8. Version Control Best Practices
+### Version Control
 
-#### Default Branch Naming
+Branch naming, protection rulesets, and PR review-thread resolution are `github-project` / `git-workflow` territory — see those skills.
 
-**✅ Use `main` as the default branch instead of `master`**
+**TYPO3-specific:** do not commit `composer.lock` in extensions (libraries) — without a lock file, `composer install` resolves versions appropriate to the consumer's PHP version. A lock committed from one dev PHP version fails CI on other matrix entries with cryptic "Your requirements could not be resolved" errors. This inverts for application projects (site packages, deployable apps), where reproducibility demands the lock.
 
-**Rationale:**
-- **Industry Standard**: GitHub, GitLab, and Bitbucket all default to `main` for new repositories
-- **Modern Convention**: Aligns with current version control ecosystem standards
-- **Inclusive Language**: Part of broader industry shift toward inclusive terminology
-- **Consistency**: Matches TYPO3 Core and most modern TYPO3 extensions
-
-**Migration from `master` to `main`:**
-
-If your extension currently uses `master`, migrate to `main`:
-
-```bash
-# 1. Create main branch from master
-git checkout master
-git pull origin master
-git checkout -b main
-git push -u origin main
-
-# 2. Change default branch on GitHub
-gh repo edit --default-branch main
-
-# 3. Update all branch references in codebase
-# - CI/CD workflows (.github/workflows/*.yml)
-# - Documentation (guides.xml, *.rst files)
-# - URLs in CONTRIBUTING.md, README.md
-
-# 4. Delete old master branch
-git branch -d master
-git push origin --delete master
-```
-
-**Example CI/CD workflow update:**
-
-```yaml
-# .github/workflows/tests.yml
-on:
-  push:
-    branches: [main, develop]  # Changed from: master
-  pull_request:
-    branches: [main]           # Changed from: master
-```
-
-**Example documentation update:**
-
-```xml
-<!-- Documentation/guides.xml -->
-<extension edit-on-github-branch="main" />  <!-- Changed from: master -->
-```
-
-#### Branch Protection Enforcement
-
-**Prevent accidental `master` branch recreation** and **protect `main` branch** using GitHub Repository Rulesets.
-
-**Block master branch - prevents creation and pushes:**
-
-Create `ruleset-block-master.json`:
-
-```json
-{
-  "name": "Block master branch",
-  "target": "branch",
-  "enforcement": "active",
-  "conditions": {
-    "ref_name": {
-      "include": ["refs/heads/master"],
-      "exclude": []
-    }
-  },
-  "rules": [
-    {
-      "type": "creation"
-    },
-    {
-      "type": "update"
-    },
-    {
-      "type": "deletion"
-    }
-  ],
-  "bypass_actors": []
-}
-```
-
-Apply the ruleset:
-
-```bash
-gh api -X POST repos/OWNER/REPO/rulesets \
-  --input ruleset-block-master.json
-```
-
-**Protect main branch - requires CI and prevents force pushes:**
-
-Create `ruleset-protect-main.json`:
-
-```json
-{
-  "name": "Protect main branch",
-  "target": "branch",
-  "enforcement": "active",
-  "conditions": {
-    "ref_name": {
-      "include": ["refs/heads/main"],
-      "exclude": []
-    }
-  },
-  "rules": [
-    {
-      "type": "required_status_checks",
-      "parameters": {
-        "required_status_checks": [
-          {
-            "context": "build"
-          }
-        ],
-        "strict_required_status_checks_policy": false
-      }
-    },
-    {
-      "type": "non_fast_forward"
-    }
-  ],
-  "bypass_actors": [
-    {
-      "actor_id": 5,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    }
-  ]
-}
-```
-
-Apply the ruleset:
-
-```bash
-gh api -X POST repos/OWNER/REPO/rulesets \
-  --input ruleset-protect-main.json
-```
-
-**Verify rulesets are active:**
-
-```bash
-# List all rulesets
-gh api repos/OWNER/REPO/rulesets
-
-# Test master branch is blocked (should fail)
-git push origin test-branch:master
-# Expected: remote: error: GH013: Repository rule violations found
-```
-
-**Benefits of Repository Rulesets:**
-- ✅ Prevents accidental `master` branch recreation
-- ✅ Enforces CI status checks before merging to `main`
-- ✅ Prevents force pushes to protected branches
-- ✅ Allows admin bypass for emergency situations
-- ✅ More flexible than legacy branch protection rules
-- ✅ Supports complex conditions and multiple rule types
-
-#### Required Conversation Resolution
-
-Enable `required_conversation_resolution` in branch protection to **enforce** that all PR review threads are resolved before merging. Without this, review feedback (including automated reviewers like GitHub Copilot) can be silently ignored.
-
-```bash
-# Check if enabled
-gh api repos/OWNER/REPO/branches/main/protection \
-  --jq 'if .required_conversation_resolution.enabled then "✅ Enabled" else "❌ NOT enabled" end'
-
-# Enable (include in full branch protection PUT)
-# This command safely fetches current settings, enables conversation resolution, and applies the change.
-# It correctly handles the GitHub API's different structures for GET and PUT.
-gh api repos/OWNER/REPO/branches/main/protection \
-  | jq 'del(.required_conversation_resolution) | . + {"required_conversation_resolution": true}' \
-  | gh api repos/OWNER/REPO/branches/main/protection -X PUT --input -
-```
-
-Or via GitHub UI: Settings → Branches → Edit → Check **"Require conversation resolution before merging"**
-
-#### .gitignore Best Practices
-
-**Standard .gitignore for TYPO3 Extensions:**
-
-```gitignore
-# Composer
-composer.lock
-vendor/
-
-# Build artifacts and caches
-.Build/
-.php-cs-fixer.cache
-.phpunit.result.cache
-
-# IDE and editors
-.idea/
-.vscode/
-*.sublime-*
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Testing artifacts
-var/
-.phpunit.cache/
-
-# Node.js (if using Playwright/frontend tools)
-node_modules/
-Build/node_modules/
-
-# Do not ignore public icons (example)
-public/*
-!public/Icons/
-!public/Icons/**
-```
-
-**Key Patterns Explained:**
-
-| Pattern | Purpose |
-|---------|---------|
-| `.Build/` | Composer's vendor-dir and build artifacts when using `"vendor-dir": ".Build/vendor"` |
-| `.php-cs-fixer.cache` | PHP-CS-Fixer cache file (regenerated on each run) |
-| `.phpunit.result.cache` | PHPUnit result cache |
-| `composer.lock` | **DO NOT commit in TYPO3 extensions** — extensions are libraries. Without a lock file, `composer install` resolves versions appropriate to the consumer's PHP version. A committed lock generated on a different PHP version in your dev environment will fail CI on older matrix entries with cryptic "Your requirements could not be resolved" errors. Rule only inverts for application projects (site packages, deployable apps), where reproducibility demands the lock. |
-| `vendor/` | Composer dependencies |
-| `var/` | TYPO3 testing framework temporary files |
-
-**Anti-pattern: Double-ignore**
-
-❌ **Wrong:** Adding patterns already covered by parent ignore
-```gitignore
-.Build/
-.Build/vendor/      # Redundant - already ignored by .Build/
-.Build/bin/         # Redundant - already ignored by .Build/
-```
-
-✅ **Right:** Single parent pattern covers all subdirectories
-```gitignore
-.Build/
-```
-
-**Tracking vs Ignoring:**
-
-If a file was previously tracked and you add it to `.gitignore`, you must also remove it from git:
-
-```bash
-# Stop tracking a file that's now gitignored
-git rm --cached .php-cs-fixer.cache
-git commit -m "chore: stop tracking php-cs-fixer cache"
-
-# Stop tracking a directory
-git rm -r --cached .Build/
-git commit -m "chore: stop tracking build artifacts"
-```
-
-**DDEV-specific ignores (optional):**
-
-If using DDEV, consider also ignoring:
-
-```gitignore
-# DDEV (optional - some teams commit .ddev/)
-.ddev/.gitignore
-.ddev/db_snapshots/
-.ddev/import-db/
-```
-
-### 9. Language File Organization
+### Language File Organization
 
 **Resources/Private/Language/locallang.xlf:**
 
@@ -998,7 +736,7 @@ If using DDEV, consider also ignoring:
 </xliff>
 ```
 
-### 10. TCA Best Practices
+### TCA Best Practices
 
 **Configuration/TCA/tx_myext_domain_model_product.php:**
 
@@ -1058,51 +796,11 @@ return [
 ];
 ```
 
-### 11. Security Best Practices
+### Security
 
-**✅ Input Validation:**
-```php
-use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\MathUtility;
+Input validation, SQL injection prevention, and CSRF protection are `security-audit` territory — see that skill. TYPO3-specific security patterns (shell execution, secure random data, serialization, template escaping, XML/CDATA safety, file upload validation, libxml cleanup) are covered in `## Security Patterns` below, not duplicated here.
 
-// Validate integer input
-if (!MathUtility::canBeInterpretedAsInteger($input)) {
-    throw new \InvalidArgumentException('Invalid integer value');
-}
-
-// Sanitize email
-$email = GeneralUtility::validEmail($input) ? $input : '';
-
-// Escape output in templates
-{product.title -> f:format.htmlspecialchars()}
-```
-
-**✅ SQL Injection Prevention:**
-```php
-// Use QueryBuilder with bound parameters
-$queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-    ->getQueryBuilderForTable('tx_myext_domain_model_product');
-
-$products = $queryBuilder
-    ->select('*')
-    ->from('tx_myext_domain_model_product')
-    ->where(
-        $queryBuilder->expr()->eq(
-            'uid',
-            $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)
-        )
-    )
-    ->executeQuery()
-    ->fetchAllAssociative();
-```
-
-**✅ CSRF Protection:**
-```html
-<!-- Always include form protection token -->
-<f:form.hidden property="__trustedProperties" value="{formProtection}" />
-```
-
-### 12. GrumPHP Configuration
+### GrumPHP Configuration
 
 **Pre-commit Hook Best Practices:**
 
@@ -1754,6 +1452,7 @@ Add proper accessibility attributes to interactive elements:
 </table>
 ```
 
+||||||| parent of 4cac7a1 (feat: add learnings from 60+ agent review cycles):references/best-practices.md
 ## XLIFF Translation Hygiene
 
 Periodically audit for unused translation keys defined in `locallang.xlf` (and language variants like `de.locallang.xlf`) but never referenced in PHP or Fluid templates. Dead keys accumulate during refactoring and clutter translation files.

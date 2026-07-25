@@ -180,7 +180,7 @@ Use **Bootstrap-style naming** -- hyphenated lowercase with component prefixes. 
 
 ## Variables
 
-Override Bootstrap defaults in `Basic/_variables.scss` (colors, spacing, fonts, breakpoints, container widths). See `references/bootstrap-theming.md` for the complete list of variables to customize per project.
+Override Bootstrap defaults in `Basic/_variables.scss` (colors, spacing, fonts, breakpoints, container widths) -- see Bootstrap's own `_variables.scss` for the full override list. See `references/bootstrap-theming.md` for this project's theming flow and CI-color mapping convention.
 
 ## Fonts
 

@@ -1,6 +1,6 @@
 services:
   # Valkey for TYPO3 caching (open source, wire-compatible with Redis)
-  # See references/0001-valkey-default-with-redis-alternative.md for rationale
+  # See docs/adr/0001-valkey-default-with-redis-alternative.md for rationale
   # For Redis 7 alternative, see templates/docker-compose.services-redis.yaml.optional
   valkey:
     container_name: ddev-${DDEV_SITENAME}-valkey

@@ -96,6 +96,84 @@ This pattern:
 
 **Alternative:** set `backupGlobals="false"` in `phpunit.xml` if no test relies on global isolation -- but the defensive read pattern above is preferred because it also hardens production code for genuinely uninitialised CLI contexts.
 
+## Transient `HashService`/`encryptionKey` E_WARNING When a Functional Test Builds a DI Container
+
+**Symptom:** a functional test that realises a dependency-injection container which
+loads a package (e.g. `dashboard`) fails with `failOnWarning=true` on an
+`E_WARNING` — "Undefined array key" / "Trying to access array offset on null" —
+raised from core `TYPO3\CMS\Core\Crypto\HashService::hmac()` reading
+`$GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey']`. The tell-tale traits:
+
+- It fires only on **one matrix cell** (seen on PHP 8.2 × TYPO3 `^14.3`), only on
+  the cold CI container — **not reproducible locally**, and the test **passes in
+  isolation** and in a functional-only run.
+- The warning originates inside `parent::setUp()`'s container build, not in your
+  own test body.
+
+**Cause:** realising the container makes TYPO3 core reset and repopulate
+`$GLOBALS['TYPO3_CONF_VARS']` mid-build; a service instantiated during that window
+calls `HashService::hmac()` while `['SYS']['encryptionKey']` is momentarily unset.
+It is benign — production's error handler suppresses it, and the functional test
+runner sets `errorHandler=''`, so only `failOnWarning=true` turns it into a failure.
+
+**Why the obvious fixes don't work:** the build clears the global itself, so pinning
+`encryptionKey` or using `#[BackupGlobals(false)]` doesn't help; the warning fires
+inside `parent::setUp()`, so an in-body `try` can't catch it; `#[WithoutErrorHandler]`
+works but is too broad (an AI reviewer will rightly flag it — it disables *all*
+error-to-exception conversion for the test).
+
+**Fix:** wrap the `parent::setUp()` call in a **scoped** `set_error_handler` that
+suppresses *only* this specific warning, and restore it **inside the same method**
+so the handler stack stays balanced (a set-in-`setUp` / restore-in-`tearDown` split
+trips `failOnRisky`):
+
+```php
+protected function setUp(): void
+{
+    // Benign core-boot warning on PHP 8.2 × TYPO3 ^14.3 cold CI containers:
+    // building the DI container transiently unsets ['SYS']['encryptionKey']
+    // while HashService::hmac() reads it. Suppress ONLY that warning and
+    // delegate everything else back to the handler that was active (PHPUnit's),
+    // so failOnWarning still catches unrelated warnings during parent::setUp().
+    $previous = set_error_handler(
+        static function (int $errno, string $errstr, string $errfile, int $errline) use (&$previous): bool {
+            // Normalise separators so the match also holds on Windows (backslash paths).
+            $isBenignBootWarning = str_contains(str_replace('\\', '/', $errfile), 'Crypto/HashService.php')
+                && (str_contains($errstr, 'TYPO3_CONF_VARS')
+                    || str_contains($errstr, 'array offset')      // "…array offset on null"
+                    || str_contains($errstr, 'Undefined array key'));
+
+            if ($isBenignBootWarning) {
+                return true; // swallow only this one
+            }
+
+            // Not ours: hand back to the previously-registered (PHPUnit) handler so
+            // real warnings still fail the test; false only if there was none.
+            return $previous !== null
+                ? (bool) $previous($errno, $errstr, $errfile, $errline)
+                : false;
+        },
+        \E_WARNING,
+    );
+
+    try {
+        parent::setUp();
+    } finally {
+        restore_error_handler();
+    }
+
+    // ... rest of setUp ...
+}
+```
+
+The delegation is what keeps the guard honest: the matched benign warning returns
+`true` (swallowed), but every other warning is handed back to the handler that was
+active — PHPUnit's — so `failOnWarning` still catches real issues during
+`parent::setUp()`. (Returning `false` there instead would fall through to PHP's
+*internal* handler, silently blinding `failOnWarning` for that window.) Capture the
+previous handler by reference so the closure can delegate to it, and match on both
+`errfile` (`Crypto/HashService.php`) **and** `errstr` to keep the guard narrow.
+
 ## GD/Imagick Extension Guard
 
 Tests involving image processing (thumbnails, resizing, format conversion) must check for the GD or Imagick extension. CI environments may not have image libraries installed.
@@ -223,6 +301,30 @@ protected function tearDown(): void
     }
     parent::tearDown();
 }
+```
+
+## Recovering from Root-Owned Test Artifacts (Docker Leftovers)
+
+A functional run inside a Docker container that runs as **root** (no `--user` flag) writes `public/typo3temp/var/tests/` (and `.Build/`, `var/`) as root. A later run on the host (or as a non-root user) then can't remove or recreate those dirs, and every test errors in `setUp()`/bootstrap:
+
+```
+TYPO3\TestingFramework\Core\Exception: Can not remove folder:
+  .../public/typo3temp/var/tests/functional-XXXXXXX
+Directory ".../public/typo3temp/var/tests" could not be created
+```
+
+This is a **cascade** — one permission fatal aborts the whole class, so you see N identical `setUp()` errors, not N real failures. Read the *first* one.
+
+**Prevent:** always pass `--user "$(id -u):$(id -g)"` to `docker run` for test containers (the skill's `runTests.sh` does this on Linux; see `test-runners.md`).
+
+**Recover** (the dirs already exist root-owned and the host can't touch them) — delete or chown via a throwaway root container, then re-run:
+
+```bash
+# Remove the root-owned test dirs
+docker run --rm -v "$PWD:/app" -w /app alpine rm -rf public/typo3temp/var/tests
+
+# ...or hand ownership of the whole tree back to your user
+docker run --rm -v "$PWD:/app" -w /app alpine chown -R "$(id -u):$(id -g)" public/typo3temp
 ```
 
 ## PHPUnit Version Compatibility: createMock vs createStub

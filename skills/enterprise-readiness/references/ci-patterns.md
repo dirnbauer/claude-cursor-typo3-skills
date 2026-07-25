@@ -5,68 +5,9 @@ Covers Git hooks, pipeline design, and quality gates.
 
 ## 1. Git Hooks Strategy
 
-### Pre-commit vs Pre-push Division
-
-**Principle:** Fast feedback locally, thorough verification before sharing.
-
-| Hook | Purpose | Speed Target | What to Run |
-|------|---------|--------------|-------------|
-| **pre-commit** | Catch obvious issues | < 5 seconds | Format, lint, build, secrets |
-| **pre-push** | Thorough verification | < 2 minutes | Full test suite, security scans |
-
-### Lefthook Configuration Example
-
-```yaml
-# .lefthook.yml
-
-pre-commit:
-  parallel: true
-  commands:
-    fmt:
-      glob: "*.{go,php,ts,js}"
-      run: |
-        # Language-specific formatters
-        gofmt -w {staged_files} 2>/dev/null || true
-        prettier --write {staged_files} 2>/dev/null || true
-
-    lint:
-      glob: "*.{go,php,ts}"
-      run: |
-        golangci-lint run --new-from-rev=HEAD~1 || true
-        phpstan analyse --no-progress || true
-        eslint {staged_files} || true
-
-    build:
-      run: |
-        go build ./... || make build
-
-    secrets:
-      run: gitleaks protect --staged --no-banner
-
-pre-push:
-  parallel: true
-  commands:
-    test:
-      run: |
-        go test -race ./...
-        # Or: phpunit, npm test, etc.
-
-    lint-full:
-      run: golangci-lint run --timeout 5m
-
-    security:
-      run: |
-        govulncheck ./...
-        # Or: composer audit, npm audit, etc.
-```
-
-### Hook Bypass Policy
-
-- **Never** bypass hooks in normal workflow
-- Use `--no-verify` only for:
-  - Emergency hotfixes (document why)
-  - WIP commits on feature branches (squash before PR)
-- CI must run same checks as hooks (no bypass possible)
+Hook framework selection (lefthook/captainhook/husky/pre-commit), the pre-commit/pre-push
+split, and the never-bypass policy are owned by `git-workflow`. See
+[`git-hooks-setup.md`](https://github.com/netresearch/git-workflow-skill/blob/main/skills/git-workflow/references/git-hooks-setup.md).
 
 ## 2. Comprehensive CI Pipeline
 
@@ -322,27 +263,11 @@ coverage:
 
 ### PR Quality Requirements
 
-```yaml
-# Branch protection rules
-branch_protection:
-  required_status_checks:
-    strict: true
-    contexts:
-      - lint
-      - test (ubuntu-latest)
-      - test (macos-latest)
-      - test (windows-latest)
-      - codeql
-      - vulnerability-scan
-
-  required_pull_request_reviews:
-    required_approving_review_count: 1
-    dismiss_stale_reviews: true
-
-  required_linear_history: true  # Enforce rebase
-
-  required_signatures: true      # Signed commits
-```
+Branch protection configuration (required status checks, required reviews, and the
+`required_linear_history`/`required_signatures` interaction) is owned by
+`github-project`. See
+[`repo-bootstrap.md`](https://github.com/netresearch/github-project-skill/blob/main/skills/github-project/references/repo-bootstrap.md) and
+[`merge-strategy.md`](https://github.com/netresearch/github-project-skill/blob/main/skills/github-project/references/merge-strategy.md).
 
 ## 4. PHPStan Baseline Management
 
@@ -502,78 +427,16 @@ strategy:
 
 ## 8. Signed Commits Enforcement
 
-### Problem: GitHub Can't Sign Rebase Merges
-
-When repository requires signed commits AND only allows rebase merge:
-
-```yaml
-# This fails because GitHub can't sign rebased commits
-gh pr merge 123 --rebase
-# Error: Base branch requires signed commits
-```
-
-### Solution: Local Merge Workflow
-
-```bash
-# 1. Fetch and checkout main
-git checkout main
-git pull origin main
-
-# 2. Fast-forward merge (preserves signatures)
-git merge feature-branch --ff-only
-
-# 3. Push to main
-git push origin main
-```
-
-### Automating with PR Labels
-
-```yaml
-# Workflow triggered by 'ready-to-merge' label
-on:
-  pull_request:
-    types: [labeled]
-
-jobs:
-  merge:
-    if: github.event.label.name == 'ready-to-merge'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.MERGE_TOKEN }}  # PAT with push access
-
-      - name: Merge PR
-        run: |
-          git checkout main
-          git merge origin/${{ github.head_ref }} --ff-only
-          git push origin main
-```
+Signed commits and merge strategy compatibility (why GitHub can't sign rebase/squash
+merges, the local-rebase-then-merge-commit workflow, auto-merge strategy
+requirements) is owned by `github-project`. See
+[`merge-strategy.md`](https://github.com/netresearch/github-project-skill/blob/main/skills/github-project/references/merge-strategy.md).
 
 ## 9. Reusable Workflow Pinning
 
-### Supply Chain Security for Reusable Workflows
-
-All `uses:` references to **third-party** reusable workflows must be pinned to
-commit SHAs, just like regular actions:
-
-```yaml
-# BAD: branch reference is mutable (supply chain risk)
-jobs:
-  ci:
-    uses: org/shared-workflows/.github/workflows/ci.yml@main
-
-# BAD: tag reference is also mutable
-jobs:
-  ci:
-    uses: org/shared-workflows/.github/workflows/ci.yml@v2
-
-# GOOD: SHA-pinned (immutable reference)
-jobs:
-  ci:
-    uses: org/shared-workflows/.github/workflows/ci.yml@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2 # v2.1.0
-```
+SHA-pinning mechanics for third-party reusable workflows, transitive dependency
+risk, and the audit checklist are owned by `github-project`. See
+[`reusable-workflow-security.md`](https://github.com/netresearch/github-project-skill/blob/main/skills/github-project/references/reusable-workflow-security.md).
 
 ### Exception: Org-Internal Workflows
 
@@ -582,16 +445,6 @@ Org-internal reusable workflows (maintained by the same organization) **should u
 **anti-pattern** because it breaks centralized security update propagation.
 
 See `checkpoints.yaml` ER-33 for the enforcement rule.
-
-### Auditing Workflow References
-
-```bash
-# Find all reusable workflow references
-grep -rn 'uses:.*\.github/workflows/.*\.yml@' .github/workflows/
-
-# Find unpinned references (tag or branch, no SHA)
-grep -rn 'uses:.*\.github/workflows/.*\.yml@' .github/workflows/ | grep -v '@[a-f0-9]\{40\}'
-```
 
 ## Related References
 

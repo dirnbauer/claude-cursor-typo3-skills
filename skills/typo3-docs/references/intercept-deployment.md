@@ -258,6 +258,54 @@ Understanding the rendering pipeline:
 2. Check build logs for errors
 3. Verify `guides.xml` or `Settings.cfg` has correct project configuration
 
+### Version-Tag Webhook Returns HTTP 500 (typo3.org-side outage)
+
+A release can be blocked by an Intercept **server-side** failure that affects only
+the **version-tag** webhook while `main` pushes keep rendering fine. The
+`refs/tags/vX.Y.Z` delivery to `https://docs-hook.typo3.org` returns **HTTP 500**
+(GitHub delivered it fine — the 500 comes back *from* Intercept), so **no render
+run is ever created** for the tag. If your release pipeline has a "verify docs
+rendered" step (e.g. `release.yml`'s `verify-docs` job), it then fails with a
+**misleading message** such as *"Failed to list render workflow runs"* / *"every
+jobs API query failed"* — the real cause is not an API problem, it is that **no
+render run exists to find**. Don't chase the API error; check the webhook delivery.
+
+**Diagnose** — read the tag delivery's response status directly:
+
+```bash
+REPO=owner/repo
+# 1. Find the docs-hook.typo3.org webhook id
+HOOK=$(gh api "repos/$REPO/hooks" \
+  --jq '.[] | select(.config.url | contains("docs-hook.typo3.org")) | .id')
+
+# 2. List recent deliveries and their status codes.
+#    IMPORTANT: parse delivery ids with Python, NOT jq — the ids are 19-digit
+#    integers and jq silently loses precision, so a jq-extracted id 404s.
+#    --slurp wraps each --paginate page into one outer array (each page is a
+#    separate JSON document otherwise, which breaks a single json.load()).
+gh api "repos/$REPO/hooks/$HOOK/deliveries" --paginate --slurp \
+  | python3 -c 'import json,sys
+for page in json.load(sys.stdin):
+    for d in page:
+        print(d["id"], d["status_code"], d.get("event"), d.get("action") or "")'
+# A tag push showing status_code 500 (while main pushes show 200) confirms the
+# typo3.org-side outage.
+```
+
+**Recover** (once typo3.org's Intercept is healthy again — this is *their* fix,
+not yours; retrying while it is down just reproduces the 500):
+
+```bash
+# Redeliver the failed tag webhook (DID = the 19-digit delivery id from above)
+DID=<deliveryId>
+gh api -X POST "repos/$REPO/hooks/$HOOK/deliveries/$DID/attempts"
+# Then re-run the release pipeline's failed jobs so verify-docs finds the run
+gh run rerun <releaseRunId> --failed
+```
+
+Main-branch pushes rendering fine while only the version tag 500s is the signature
+of this outage — it is not a fault in your `guides.xml`, tag, or release workflow.
+
 ## Best Practices
 
 ### Pre-Push Checklist

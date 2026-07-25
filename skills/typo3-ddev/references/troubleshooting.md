@@ -224,7 +224,7 @@ name format (hyphens) as the authoritative display name:
 ❌ Landing page has generic styling instead of Netresearch branding
 
 Symptoms:
-  - Generic blue/grey colors instead of turquoise (#2F99A4)
+  - Generic blue/grey colors instead of Netresearch turquoise
   - Missing Netresearch logo
   - System fonts instead of Raleway/Open Sans
   - Extension name shows underscores instead of hyphens
@@ -238,26 +238,14 @@ Solutions:
   1. For Netresearch projects, ALWAYS check composer.json vendor:
      grep '"netresearch/' composer.json
 
-  2. Apply Netresearch branding if detected:
-     - Primary color: #2F99A4 (turquoise)
-     - Accent color: #FF4D00 (orange)
-     - Text color: #585961 (anthracite)
-     - Headlines: Raleway font
-     - Body: Open Sans font
+  2. Invoke the `netresearch-branding` skill for colors, fonts, and the
+     logo SVG — don't hardcode brand facts here. Embed the logo inline,
+     never link it externally.
 
-  3. Embed logo SVG directly (don't use external URLs):
-     <svg viewBox="0 0 100 100" width="40" height="40">
-       <rect x="5" y="5" width="90" height="90" rx="8"
-             fill="none" stroke="#2999A4" stroke-width="6"/>
-       <text x="50" y="72" text-anchor="middle"
-             font-family="Arial" font-size="60" font-weight="bold"
-             fill="#595A62">n</text>
-     </svg>
-
-  4. Get extension name from composer.json "name" field:
+  3. Get extension name from composer.json "name" field:
      jq -r '.name' composer.json  # Returns: netresearch/nr-llm
 
-See: references/index-page-generation.md for complete branding guide
+See: references/index-page-generation.md (Branding section)
 ```
 
 **13. Backend 500 over HTTPS but 200 over HTTP (trusted hosts)**
@@ -338,3 +326,43 @@ ddev exec -d /var/www/html/v{VERSION} composer require <vendor>/<pkg>:dev-main -
 # ddev exec -d /var/www/html/v{VERSION} composer config preferred-install dist
 # alternative: `ddev auth ssh` to forward your host SSH agent into the container
 ```
+### Stale caches after a branch switch or extension-code change
+
+Because the extension is mounted via a Composer path repo (symlink), its source can change
+underneath caches TYPO3 built earlier. Two non-obvious failure modes:
+
+- **Stale compiled DI container** (`var/cache/code/`) → backend 500 with
+  `ArgumentCountError: Too few arguments to ...::__construct()` (a service gained a
+  constructor dependency since the install).
+- **Stale language (l10n) cache** → pages render with EMPTY `f:translate` output (blank
+  labels, or only the non-translated literals around a label) after switching the worktree
+  to a branch with different XLF files and back without re-flushing.
+
+A plain `cache:flush` misses the compiled DI container most often — clear it explicitly:
+
+```bash
+ddev exec -d /var/www/html/v{VERSION} bash -c 'rm -rf var/cache/code/* && \
+  vendor/bin/typo3 cache:flush && vendor/bin/typo3 extension:setup'
+# extension:setup only if DI/schema changed
+```
+
+Flush BEFORE trusting (or screenshotting) the rendered backend after a branch switch, or
+when the extension's PHP/templates/XLF changed — "it rendered before the switch" is not
+evidence about the current state.
+
+## Backend JS/CSS change not visible after edit
+
+TYPO3 serves backend ES modules (and CSS) at a **content-stable `_assets/<hash>/…`
+URL** — the hash is of the package path, not the file content. So after you edit
+a backend `.js`/`.css`, `vendor/bin/typo3 cache:flush` regenerates the importmap
+but the URL is unchanged, and the browser's HTTP cache keeps serving the **old**
+module on a normal reload — which reads as "not deployed" when the server is fine.
+
+Fixes:
+
+- **Hard-reload** (`Ctrl/Cmd+Shift+R`) or clear the browser HTTP cache.
+- **Playwright:** a plain `navigate` isn't enough — clear the cache via CDP:
+  `await page.context().newCDPSession(page); cdp.send('Network.clearBrowserCache')`.
+- **Confirm what's actually served** (independent of any browser) before
+  concluding "not deployed":
+  `curl -sk https://…/_assets/<hash>/JavaScript/…/Foo.js | head`.

@@ -55,12 +55,12 @@ Use `assets/Build/Scripts/runTests.sh` as starting point. Customize:
 
 | Option | Description | Values |
 |--------|-------------|--------|
-| `-s` | Test suite | `unit`, `functional`, `functionalParallel`, `e2e`, `lint`, `phpstan`, `cgl`, `fuzz`, `mutation` |
+| `-s` | Test suite | `unit`, `functional`, `functionalParallel`, `e2e`, `lint`, `phpstan`, `cgl`, `rector`, `fuzz`, `mutation`, `composer` (runs a composer command, e.g. `-s composer dump-autoload`) |
 | `-d` | Database | `sqlite` (default), `mariadb`, `mysql`, `postgres` |
 | `-i` | DB version | mariadb: 10.11, mysql: 8.0, postgres: 16 |
 | `-p` | PHP version | `8.2`, `8.3`, `8.4`, `8.5` |
 | `-x` | Enable Xdebug | |
-| `-n` | Dry-run | For cgl |
+| `-n` | Dry-run | For cgl, rector |
 | `-u` | Update images | |
 
 ## Test Parallelization
@@ -96,13 +96,44 @@ fi
 find Tests/Functional -name '*Test.php' | xargs -P${PARALLEL_JOBS} ...
 ```
 
-**Performance**: 2-3x speedup (24s → 10s for 62 tests)
+**Performance**: 2-3x speedup (24s → 10s for 62 tests). On CI's slower shared runners the win is larger — an 8-11min serial functional cell drops to ~2.5min.
 
-**Requirement**: SQLite with tmpfs for isolated databases per test file.
+**Why one process per file is collision-free (and works on MariaDB too):** the testing-framework derives BOTH the test instance directory AND the database name from the same per-class identifier — `substr(sha1(static::class), 0, 7)` (`FunctionalTestCase::getInstanceIdentifier`), used as `functional-<id>/` for the SQLite file and as `<originalDatabaseName>_ft<id>` for MySQL/MariaDB (`FunctionalTestCase.php`, the non-sqlite branch). So each **file** gets its own database on a shared server — no CREATE race, safe at `-P4` well under a default `max_connections` of 151. Shard by **file**, never by test *method* (`--filter`): several methods of one class share one instance.
+
+**Glob every suite `FunctionalTests.xml` declares, not just `Tests/Functional`.** If the config runs a second testsuite (e.g. an `e2e-backend` directory `Tests/E2E/Backend/`), a sharder that globs only `Tests/Functional` **silently drops it** — the classes never run and CI stays green. Match the config:
+
+```bash
+find Tests/Functional Tests/E2E/Backend -name '*Test.php' | xargs -P${PARALLEL_JOBS} ...
+```
+
+**Force `XDEBUG_MODE=off` on non-coverage parallel runs.** If setup-php installed Xdebug as the coverage driver, it stays in coverage mode and taxes runtime ~1.6x **even when no coverage is collected** (measured: 61s vs 37.6s on the same 126-test subset). Only enable it on the serial coverage run.
+
+**Requirement**: SQLite with tmpfs (or MySQL/MariaDB, per above) for isolated databases per test file.
 
 ### Unit Tests
 
 Unit tests are typically fast enough (<1s) that parallelization overhead would be counterproductive. PHPUnit's native parallelization (ParaTest) doesn't support PHPUnit 12 yet.
+
+## Gotcha: Single-Process PHPUnit OOMs on Large Functional Suites
+
+Running the whole functional suite through plain single-process PHPUnit (`vendor/bin/phpunit -c phpunit.xml.dist`, no parallelization) accumulates every test's compiled DI container and TYPO3 bootstrap in one PHP process. On a few hundred functional tests this exhausts `memory_limit` — typically a fatal deep in Symfony's container dumper:
+
+```
+PHP Fatal error:  Allowed memory size of 536870912 bytes exhausted ...
+  in .../symfony/dependency-injection/Dumper/PhpDumper.php
+```
+
+The symptom is misleading: progress dots stop part-way with **no PHPUnit summary line**, and a `timeout`/wrapper around the call may still report exit 0 — so it looks like "passed" when it actually died mid-run.
+
+**Fix:** run the suite the way the project's entry point does — in **isolated worker processes**, one slice per worker, so container compilation never accumulates:
+
+```bash
+./Build/Scripts/runTests.sh -s functionalParallel   # xargs -P, one phpunit process per test file
+# or, for a paratest-based project entry point:
+composer test
+```
+
+Reserve plain `phpunit --filter=SomeClass` for a single class. (This is the concrete reason behind Best Practice "Single Entry Point — all tests via `runTests.sh`, not direct PHPUnit".)
 
 ## Database Support
 
@@ -331,6 +362,30 @@ jobs:
       - run: Build/Scripts/runTests.sh -s e2e
 ```
 
+## Fast setup in a fresh worktree (rsync a known-good `.Build`)
+
+A newly created worktree has no `.Build/` (it's gitignored), so `runTests.sh`
+fails with `Could not open input file: .Build/bin/phpunit`. A fresh `composer
+install` works but is slow, and on WSL2 a fresh resolution can segfault the
+full-config PHPUnit run (flaky exit 139). Faster and stable: rsync a **known-good**
+`.Build` from a sibling worktree, then regenerate the autoloader so the new
+worktree's own classes are registered.
+
+```bash
+rsync -a --delete ../<sibling-worktree>/.Build/ ./.Build/
+Build/Scripts/runTests.sh -s composer dump-autoload   # register new PSR-4 classes
+Build/Scripts/runTests.sh -s unit
+```
+
+Only reuse a `.Build` whose resolved dependency versions are compatible with this
+branch (e.g. the same `nr-llm` minor). If they differ, the reused vendor can carry
+a different API than your code targets — a symptom is a value object's constructor
+requiring an argument your code/tests omit (signatures drift across minors).
+Verify the constructor at the **resolved** version, not the library's `main`, and
+run the static analyzer **after** the tests are written (test files are analyzed
+too). CI remains authoritative — treat the rsynced `.Build` as a local fast path,
+not a substitute for the CI matrix.
+
 ## Troubleshooting
 
 ### TTY Errors
@@ -388,6 +443,32 @@ sudo rm -rf node_modules .Build
 6. **Makefile Shortcuts**: Provide `make test`, `make ci` for convenience
 7. **Update Images**: Run `-u` periodically to get latest TYPO3 images
 8. **Keep Versions Synced**: Playwright versions in package.json and runTests.sh
+
+## Gotcha: `-s unit` Green ≠ Safe When You Touch a Shared Type
+
+`./Build/Scripts/runTests.sh -s unit` covers **only** `Tests/Unit/`. When you
+change a **widely-consumed** type — a shared value object, DTO, enum, or a
+method on a public service interface — its consumers and their assertions live
+in the **functional** suite (and integration/e2e), which `-s unit` never runs.
+
+A green unit run then hides a real break, and it surfaces later in CI or a
+reviewer's comment instead of on your machine. (Real case: a change to a
+`ToolSpec` value object passed `-s unit` locally but broke a functional test
+asserting the old shape — caught by CI + the PR bot, not the local unit run.)
+
+Before pushing a change to a shared type:
+
+```bash
+# Find who depends on it, then run the suites that exercise them.
+# Use -e per pattern (portable across GNU/BSD grep; escaped \| is not).
+grep -rn -e 'YourValueObject' -e '->yourChangedMethod' Classes/ Tests/
+./Build/Scripts/runTests.sh -s unit
+./Build/Scripts/runTests.sh -s functional     # the assertions on the old shape live here
+```
+
+If the extension's CI runs functional tests (it should — a functional job that
+is silently skipped is its own bug), treat "did I run the same suites CI will?"
+as the pre-push checklist, not "is unit green?".
 
 ## Resources
 

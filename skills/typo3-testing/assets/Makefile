@@ -4,7 +4,7 @@
 #
 # CUSTOMIZATION: Update extension name in help text
 
-.PHONY: help all check test unit functional e2e fuzz mutation lint phpstan cs fix rector clean update
+.PHONY: help all check test unit functional e2e fuzz mutation lint phpstan cs fix rector docs clean update
 
 .DEFAULT_GOAL := help
 
@@ -35,6 +35,7 @@ help:
 	@echo "    make rector     Apply Rector rules"
 	@echo ""
 	@echo "  Other:"
+	@echo "    make docs       Render documentation"
 	@echo "    make clean      Remove build artifacts"
 	@echo "    make update     Update Docker images"
 
@@ -86,7 +87,11 @@ fix:
 	$(RUNTESTS) -s cgl
 
 rector:
-	$(RUNTESTS) -s cgl
+	$(RUNTESTS) -s rector
+
+# === Documentation ===
+docs:
+	$(RUNTESTS) -s renderDocumentation
 
 # === Maintenance ===
 clean:

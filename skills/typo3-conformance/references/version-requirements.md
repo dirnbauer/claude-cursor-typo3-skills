@@ -39,31 +39,13 @@
 - PHP: 8.2.0
 - Database: MariaDB 10.4+ / MySQL 8.0+ / PostgreSQL 10.0+ / SQLite 3.8.3+
 
-### TYPO3 14 LTS
-
-**Release:** October 2025
-**End of Life:** ~2028
-**PHP Support:** 8.2 - 8.5
-
-| PHP Version | Support Status | Since TYPO3 Version |
-|------------|----------------|---------------------|
-| 8.2 | ✅ Supported | 14.0 |
-| 8.3 | ✅ Supported | 14.0 |
-| 8.4 | ✅ Supported | 14.0 |
-| 8.5 | ✅ Supported | 14.x |
-
-**Minimum Requirements:**
-- PHP: 8.2.0
-- Composer: `typo3/cms-core: ^14`
-- Database: MariaDB 10.4+ / MySQL 8.0+ / PostgreSQL 10.0+ / SQLite 3.8.3+
-
 ## Conformance Checker Standards
 
 The TYPO3 conformance checker validates extensions against:
 
 **Target Versions:**
-- TYPO3: 12.4 LTS / 13.x / 14 LTS
-- PHP: 8.1 / 8.2 / 8.3 / 8.4 / 8.5
+- TYPO3: 12.4 LTS / 13.x
+- PHP: 8.1 / 8.2 / 8.3 / 8.4
 - PSR Standards: PSR-11 (DI), PSR-12 (Coding Style), PSR-14 (Events), PSR-15 (Middleware)
 
 **Why This Range:**

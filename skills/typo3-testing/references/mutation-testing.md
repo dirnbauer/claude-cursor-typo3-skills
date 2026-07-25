@@ -21,6 +21,63 @@ Mutation testing verifies test suite quality by introducing small bugs (mutants)
 - When refactoring to ensure tests catch regressions
 - To identify "weak spots" in test coverage
 
+## The Single-Mutant Check: Prove One Regression Guard By Hand
+
+A full Infection run is the wrong tool when the question is narrow: *does the test I just
+wrote actually catch the bug I just fixed?* Answer it directly — revert the production line
+to its buggy form, run the affected tests, and require them to **fail**; then restore the
+fix and require them to pass. A test that stays green both ways guards nothing, and it looks
+identical to a working one in a passing suite.
+
+Do this whenever the bug is one a test could plausibly miss: a silently dropped argument, a
+default that quietly substitutes for a rejected value, a mocked collaborator that accepts any
+call shape. Mock-based tests are especially prone to it — a mock cannot reproduce the real
+library's argument filtering, so asserting *how* it was called is the only thing that binds.
+
+Run it through `runTests.sh` so the check inherits the project's Docker PHP-version isolation —
+a pass/fail signal is only worth as much as the environment it came from:
+
+```bash
+# 1. Baseline: the guard passes
+Build/Scripts/runTests.sh -s unit -- --filter=theGuardingTest
+
+# 2. Reintroduce the bug (exact string replace, not a regex sed)
+python3 - <<'PY'
+p = 'Classes/Service/Thing.php'
+s = open(p).read()
+old, new = "save($path, quality: $quality)", "save($path, $quality)"
+assert s.count(old) == 1, f'expected 1 occurrence, found {s.count(old)}'
+open(p, 'w').write(s.replace(old, new))
+PY
+grep -n 'save(\$path' Classes/Service/Thing.php   # confirm the edit applied
+
+# 3. The guard MUST fail now
+Build/Scripts/runTests.sh -s unit -- --filter=theGuardingTest
+
+# 4. Restore and confirm green again
+git checkout -- Classes/Service/Thing.php
+git diff --quiet -- Classes/ && Build/Scripts/runTests.sh -s unit -- --filter=theGuardingTest
+```
+
+Where the project has no `runTests.sh` — or you are already inside the container — the direct
+equivalent is `vendor/bin/phpunit -c Build/phpunit/UnitTests.xml --filter=theGuardingTest`. This is
+the single-class case that [`test-runners.md`](test-runners.md) reserves plain `phpunit --filter`
+for; do not generalise it to running whole suites outside the entry point.
+
+Two traps make this check lie:
+
+- **Verify the mutation applied.** A `sed` pattern that silently matches nothing leaves the
+  file untouched, and the suite then "fails" for some unrelated reason — or passes, and you
+  conclude the guard is worthless. Assert the occurrence count when replacing, and `grep`
+  the file afterwards. Restore from a byte copy and confirm with `git diff --quiet`.
+- **Read the failure, not just the exit code.** In an environment with pre-existing failures
+  (a missing `gd`/`imagick` extension makes unrelated tests error), a non-zero exit proves
+  nothing on its own. Scope the run with `--filter`, or compare the failing-test set against
+  the baseline.
+
+Re-run this after any refactor of the test itself — consolidating duplicated test setup can
+quietly detach the assertion from the behaviour it was guarding.
+
 ## Tools
 
 ### Infection (Recommended)

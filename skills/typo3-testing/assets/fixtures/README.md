@@ -28,14 +28,10 @@ protected function setUp(): void
 
 ## CSV Format Rules
 
-The testing-framework `importCSVDataSet()` format is specific:
-
-1. **Line 1 is the quoted table name** - e.g. `"pages"` (one table block per name; repeat for multiple tables)
-2. **Line 2 is the column header with a LEADING comma** - e.g. `,"uid","pid","title",...` (the empty first cell marks header rows)
-3. **Data rows start with a LEADING comma** - e.g. `,1,0,"Root Page",...` (the empty first cell marks data rows)
-4. **Column names must match database field names**
-5. **Include required fields** - `uid`, `pid`, timestamps (`tstamp`, `crdate`)
-6. **Use consistent timestamps** - `1700000000` is Nov 14, 2023 (arbitrary but consistent)
+1. **Header row is required** - Column names must match database field names
+2. **Quote all values** - Use double quotes around all values
+3. **Include required fields** - `uid`, `pid`, timestamps (`tstamp`, `crdate`)
+4. **Use consistent timestamps** - `1700000000` is Nov 14, 2023 (arbitrary but consistent)
 
 ## Common Fixtures
 
@@ -68,10 +64,9 @@ $hash = $hashFactory->getDefaultHashInstance('BE')->getHashedPassword('your-pass
 For custom tables, create CSV matching your table structure:
 
 ```csv
-"tx_myext_domain_model_record"
-,"uid","pid","title","custom_field","tstamp","crdate"
-,1,0,"Record 1","value1",1700000000,1700000000
-,2,0,"Record 2","value2",1700000000,1700000000
+"uid","pid","title","custom_field","tstamp","crdate"
+1,0,"Record 1","value1",1700000000,1700000000
+2,0,"Record 2","value2",1700000000,1700000000
 ```
 
 Ensure the table is imported in your extension's `ext_tables.sql`.

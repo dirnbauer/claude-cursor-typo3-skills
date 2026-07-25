@@ -1022,7 +1022,7 @@ These patterns are **strictly forbidden** in modern TYPO3 extensions (v12+). Usi
 |-------------------|-------------------|
 | `$GLOBALS['TCA']` | `TcaSchemaFactory` (TYPO3 v14+) or inject TCA via DI |
 | `$GLOBALS['BE_USER']` | `Context` API or `BackendUserAuthentication` via DI |
-| `$GLOBALS['TSFE']` | Scoped PSR-7 Request attributes (`frontend.page.information`, `frontend.typoscript`, `frontend.user`) — note `TypoScriptFrontendController` **and** a `frontend.controller` attribute are both removed in v14 (#107831) |
+| `$GLOBALS['TSFE']` | PSR-7 Request attributes, middleware, or `TypoScriptFrontendController` via DI |
 | `$GLOBALS['TYPO3_CONF_VARS']` | `ExtensionConfiguration` or Site Settings |
 | `$GLOBALS['LANG']` | `LanguageServiceFactory` or `LocalizationUtility` |
 

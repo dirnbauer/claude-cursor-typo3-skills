@@ -1,0 +1,41 @@
+{
+  "skill_name": "redmine-agent-ready-tickets",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Hermes scheduled run: prepare the next queued open issue in Ideas. It has a clear repository link and a small feature request that fits one coding session.",
+      "expected_output": "The skill claims exactly one issue, verifies repository facts, produces and validates a complete implementation contract, publishes it with an AI disclaimer, transitions the issue to Bereit zur KI-Umsetzung, and reports the issue URL.",
+      "files": [],
+      "expectations": [
+        "Processes at most one root issue",
+        "Uses a direct contract rather than unnecessary Wayfinder tickets",
+        "Includes observable acceptance criteria and verified validation commands",
+        "Re-reads the issue after mutation"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Hermes scheduled run: ticket #10531 says only 'New extension with content elements' and does not identify target users, content-element behavior, repository, or UX direction.",
+      "expected_output": "The skill does not invent product decisions. It creates or sketches a Wayfinder map only for sharp questions, records unresolved fog, adds one high-leverage human question, sets Rueckfrage erforderlich, and stops without marking the ticket implementation-ready.",
+      "files": [],
+      "expectations": [
+        "Separates factual research from stakeholder decisions",
+        "Does not simulate a human answer in scheduled mode",
+        "Uses one question at a time",
+        "Does not set Bereit zur KI-Umsetzung"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Hermes, prepare Redmine #10545 for AI implementation. It is a large financial-ledger feature with several independently releasable outcomes and compliance risks.",
+      "expected_output": "The skill honors the named issue, chooses Wayfinder or a spec with vertical child tickets, verifies compliance and repository facts from primary sources, creates child IDs before blocking relations, validates each executable contract, and reports all Redmine links and remaining decisions.",
+      "files": [],
+      "expectations": [
+        "Honors the explicitly named issue",
+        "Uses vertical slices sized to one agent session",
+        "Creates children before native blocking relations",
+        "Addresses security, data, rollout, rollback, and observability"
+      ]
+    }
+  ]
+}

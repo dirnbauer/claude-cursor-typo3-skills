@@ -29,11 +29,15 @@ echo "Output: ${DOCS_OUTPUT}"
 sudo rm -rf "${DOCS_OUTPUT}"/* 2>/dev/null || rm -rf "${DOCS_OUTPUT}"/* 2>/dev/null || true
 
 # Render using TYPO3 render-guides Docker image with current user
+# NOTE: The 'run' subcommand is required as of 2024+
 docker run --rm \
     --user "$(id -u):$(id -g)" \
     -v "${PROJECT_ROOT}:/project" \
     ghcr.io/typo3-documentation/render-guides:latest \
-    --config=Documentation
+    run \
+    --no-progress \
+    --output=/project/Documentation-GENERATED-temp \
+    /project/Documentation
 
 echo ""
 echo "Documentation rendered successfully!"

@@ -1,6 +1,6 @@
 services:
   # Redis 7 for TYPO3 caching (alternative to Valkey for legacy production parity)
-  # See references/0001-valkey-default-with-redis-alternative.md for context
+  # See docs/adr/0001-valkey-default-with-redis-alternative.md for context
   #
   # Use this template if:
   # - Your production environment explicitly uses Redis 7.x
