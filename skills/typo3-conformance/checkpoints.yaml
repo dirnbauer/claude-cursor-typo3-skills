@@ -160,6 +160,14 @@ mechanical:
     severity: info
     desc: "Configuration/TCA/ should exist if extension defines database tables"
 
+  - id: TC-185
+    type: regex_not
+    target: "ext_tables.sql"
+    pattern: "KEY\\s+\\w+\\s*\\([^)]*\\w\\(\\d"
+    severity: error
+    desc: "ext_tables.sql KEY definitions must not use column prefix lengths (e.g. fieldname(12)) — TYPO3 Database Schema Analyzer rejects this syntax and the index is silently not created"
+    tags: [database, schema, ext_tables, index]
+
   # === DEPRECATED API PATTERNS ===
   - id: TC-40
     type: not_contains
@@ -525,9 +533,9 @@ mechanical:
   # === TCA SEARCHFIELDS AND SORTBY CHECKS ===
   - id: TC-151
     type: command
-    pattern: "find Configuration/TCA/ -name '*.php' 2>/dev/null | xargs grep -lP \"'ctrl'\" 2>/dev/null | while read f; do if ! grep -qP \"'searchFields'\" \"$f\" 2>/dev/null; then echo \"INFO: $f has no ctrl.searchFields (v12/v13: define it for backend search; v14: removed, all suitable fields searchable by default)\"; fi; done; exit 0"
-    severity: info
-    desc: "TCA backend search config: on v12/v13 define ctrl.searchFields; ctrl.searchFields was REMOVED in v14.0 (#106972) — all suitable fields are searchable by default and a field is excluded with per-column 'searchable' => false. Do not require searchFields for v14."
+    pattern: "find Configuration/TCA/ -name '*.php' 2>/dev/null | xargs grep -lP \"'ctrl'\" 2>/dev/null | while read f; do if ! grep -qP \"'searchFields'\" \"$f\" 2>/dev/null; then echo \"FAIL: $f missing searchFields in ctrl\" && exit 1; fi; done || exit 1"
+    severity: error
+    desc: "All TCA ctrl arrays must define searchFields for backend search functionality"
 
   - id: TC-152
     type: command

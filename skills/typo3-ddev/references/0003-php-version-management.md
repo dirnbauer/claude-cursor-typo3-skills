@@ -10,47 +10,17 @@
 
 ---
 
-## Context
+## Problem
 
-### The PHP Version Lag Problem
-
-DDEV base images are periodically updated but often lag behind the latest PHP patch releases. This creates situations where:
-
-- DDEV ships PHP 8.5.0RC3 (release candidate)
-- PHP 8.5.1 (stable) is already released
-- Developers need the latest stable version for:
-  - Bug fixes affecting their code
-  - Security patches
-  - CI/CD parity (GitHub Actions uses latest stable)
-  - Testing with production-equivalent versions
-
-### Example Scenario (December 2025)
-
-- **PHP 8.5.1 Released:** December 18, 2025
-- **DDEV Base Image:** Still ships PHP 8.5.0RC3
-- **Impact:** Tests passing locally may fail in CI due to version differences
-
-### TYPO3 Constraints
-
-TYPO3 v14 requires PHP >= 8.2 (supported range 8.2–8.5). Extension developers need:
-
-- Latest PHP 8.5.x patch version
-- Consistent version across dev/CI/production
-- Quick upgrade path when new patches release
-
----
+DDEV base images lag behind PHP patch releases — e.g. PHP 8.5.1 released 2025-12-18 while DDEV's base image still shipped 8.5.0RC3. TYPO3 v14 requires PHP 8.5+, and the version gap causes tests that pass locally to fail in CI (which uses the latest stable) and delays security patches.
 
 ## Decision
 
-**Use `apt-get dist-upgrade` in DDEV web container Dockerfile to upgrade PHP to the latest available patch version.**
+**Use `apt-get dist-upgrade` in the DDEV web container Dockerfile to pull the latest available PHP patch version**, rather than pinning an exact version or waiting for DDEV's base image to catch up.
 
-### Implementation
-
-Create or update `.ddev/web-build/Dockerfile`:
+`.ddev/web-build/Dockerfile`:
 
 ```dockerfile
-# .ddev/web-build/Dockerfile
-
 # Upgrade PHP to latest patch version
 # This runs after DDEV's base image is built, getting newer packages
 RUN apt-get update && \
@@ -58,20 +28,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 ```
 
-### Activation
-
-After creating/modifying the Dockerfile:
-
-```bash
-ddev restart
-```
-
-Verify the upgrade:
-
-```bash
-ddev exec php -v
-# Should show: PHP 8.5.1 (cli) ...
-```
+Activate with `ddev restart`; verify with `ddev exec php -v` (expect the current patch, e.g. `PHP 8.5.1 (cli) ...`).
 
 ---
 
@@ -79,157 +36,49 @@ ddev exec php -v
 
 ### Positive
 
-**Immediate Version Access**
-- Get new PHP patches within hours of release
-- No waiting for DDEV image rebuilds
-- Matches CI/CD environments using latest stable
-
-**Development-Production Parity**
-- Production servers typically run latest patch versions
-- Reduces "works on my machine" issues
-- More accurate local testing
-
-**Security**
-- Security patches applied immediately
-- No vulnerable PHP versions in development
-- Follows security best practices
-
-**Simplicity**
-- Single line in Dockerfile
-- No manual package pinning required
-- Automatic discovery of available versions
+- New PHP patches available within hours of release, no waiting for DDEV image rebuilds.
+- Matches CI/CD (which runs latest stable) and typical production hosting — fewer "works on my machine" surprises.
+- Security patches applied immediately.
+- One line, no manual package-version pinning.
 
 ### Negative
 
-**Build Time Increase**
-- `ddev restart` takes slightly longer (~10-30 seconds)
-- Package download on each container rebuild
+- `ddev restart` takes ~10-30s longer on rebuild (Docker layer cache makes subsequent restarts fast if the Dockerfile is unchanged).
+- A very new patch could carry a regression with no soak time.
+  Mitigation: PHP patch releases are conservative; rollback is deleting the Dockerfile line; pin an exact version instead if needed (see below).
+- Developers can end up on different patch versions depending on when they last rebuilt.
+  Mitigation: document the expected version in the project README; treat CI as the source of truth; pin an exact version for strict reproducibility.
 
-**Mitigation:** Only significant on initial rebuild; subsequent restarts use Docker layer cache if Dockerfile unchanged.
-
-**Potential Instability**
-- Very new patches could introduce regressions
-- No testing period before adoption
-
-**Mitigation:**
-- PHP patch releases are typically conservative
-- Easy rollback by removing the Dockerfile addition
-- Pin specific version if issues arise (see alternatives)
-
-**Version Drift Between Developers**
-- Different developers may get different patch versions
-- Depends on when they last rebuilt containers
-
-**Mitigation:**
-- Document expected version in README
-- Use CI as source of truth
-- Pin specific version for strict reproducibility
-
----
-
-## Alternatives Considered
-
-### Alternative 1: Pin Specific PHP Version
+### Pin instead, when strict reproducibility is required
 
 ```dockerfile
-# Pin exact version
 RUN apt-get update && \
     apt-get install -y php8.5=8.5.1-1+deb.sury.org~bookworm+1 && \
     rm -rf /var/lib/apt/lists/*
 ```
 
-**Pros:**
-- Exact reproducibility
-- All developers on same version
-
-**Cons:**
-- Manual updates required for each patch
-- Version string varies by repository
-- More maintenance burden
-
-**When to Use:** When strict version control is required (e.g., debugging version-specific issues).
-
-### Alternative 2: Wait for DDEV Updates
-
-Do nothing; wait for DDEV to update their base image.
-
-**Pros:**
-- Zero configuration
-- Tested by DDEV team
-
-**Cons:**
-- Lag of days to weeks behind PHP releases
-- No control over timing
-- May miss critical security patches
-
-**Rejected:** Unacceptable delay for security-conscious development.
-
-### Alternative 3: Custom PHP Build
-
-Build PHP from source with exact version.
-
-**Pros:**
-- Complete control
-- Can include custom extensions
-
-**Cons:**
-- Significant complexity
-- Long build times
-- Maintenance nightmare
-
-**Rejected:** Overkill for patch version management.
+Trade-off: exact reproducibility across developers, at the cost of a manual bump for every patch release.
 
 ---
 
 ## Additional Configurations
 
-### Combining with Other Customizations
-
-The `dist-upgrade` approach works alongside other Dockerfile customizations:
-
-```dockerfile
-# .ddev/web-build/Dockerfile
-
-# 1. Upgrade all packages including PHP
-RUN apt-get update && \
-    apt-get dist-upgrade -y && \
-    rm -rf /var/lib/apt/lists/*
-
-# 2. Install additional PHP extensions (if needed)
-# RUN apt-get update && \
-#     apt-get install -y php8.5-bcmath && \
-#     rm -rf /var/lib/apt/lists/*
-
-# 3. Custom PHP configuration
-# COPY php-custom.ini /etc/php/8.5/cli/conf.d/99-custom.ini
-```
-
-### Version Verification Script
-
-Add to project for CI/local consistency checking:
+### Version verification script
 
 ```bash
 #!/bin/bash
 # scripts/check-php-version.sh
-
-# TYPO3 v14 supports PHP 8.2–8.5. Set this to the version your project targets
-# (8.5 is the newest supported patch line, optional).
-EXPECTED_VERSION="8.5"
+REQUIRED_VERSION="8.5"
 CURRENT_VERSION=$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')
 
-if [[ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]]; then
-    echo "ERROR: PHP $EXPECTED_VERSION expected, found $CURRENT_VERSION"
+if [[ "$CURRENT_VERSION" != "$REQUIRED_VERSION" ]]; then
+    echo "ERROR: PHP $REQUIRED_VERSION required, found $CURRENT_VERSION"
     exit 1
 fi
-
 echo "PHP version: $(php -v | head -n1)"
 ```
 
-### composer.json Platform Constraint
-
-Ensure Composer respects the PHP version. Pin to whichever supported patch you
-run locally (8.5.1 here is the newest supported patch, optional — TYPO3 v14
-supports 8.2–8.5):
+### composer.json platform constraint
 
 ```json
 {
@@ -245,59 +94,22 @@ supports 8.2–8.5):
 
 ## Troubleshooting
 
-### Package Not Found
-
-If `dist-upgrade` doesn't find the new PHP version:
+**Package not found after `dist-upgrade`:**
 
 ```bash
-# Check available versions
-ddev exec apt-cache policy php8.5
-
-# Force repository refresh
-ddev exec apt-get update
-ddev restart
+ddev exec apt-cache policy php8.5   # check available versions
+ddev exec apt-get update && ddev restart   # force repository refresh
 ```
 
-### Rollback to Previous Version
+**Rollback:** comment out the `RUN apt-get dist-upgrade` line in the Dockerfile, then `ddev restart`.
 
-Remove or comment out the Dockerfile addition:
-
-```dockerfile
-# Temporarily disabled
-# RUN apt-get update && apt-get dist-upgrade -y && rm -rf /var/lib/apt/lists/*
-```
-
-Then restart:
+**Extension breaks after upgrade:**
 
 ```bash
-ddev restart
+ddev exec php -m | grep <extension>                          # check status
+ddev exec apt-get install --reinstall php8.5-<extension>      # reinstall
 ```
-
-### Extension Compatibility
-
-If a PHP extension breaks after upgrade:
-
-```bash
-# Check extension status
-ddev exec php -m | grep <extension>
-
-# Reinstall extension
-ddev exec apt-get install --reinstall php8.5-<extension>
-```
-
----
-
-## Review and Updates
-
-**Next Review Date:** When PHP 8.6 becomes TYPO3 v15 requirement
-
-**Trigger for Re-evaluation:**
-- DDEV changes their PHP version management approach
-- PHP adopts different release cadence
-- Debian/Ubuntu PHP packages change structure
 
 ---
 
 **Approved By:** TYPO3 DDEV Skill Project
-
-**Implementation:** Immediate (add to skill templates)

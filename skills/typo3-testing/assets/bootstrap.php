@@ -41,8 +41,18 @@ if ($autoloadFile === null) {
 require_once $autoloadFile;
 
 // Define TYPO3 constants if not already defined
-// This constant is needed for some TYPO3 core classes even in unit tests
+// These are needed for some TYPO3 core classes even in unit tests
 if (!defined('TYPO3')) {
     // TYPO3 v12+ uses this constant
     define('TYPO3', true);
+}
+
+if (!defined('TYPO3_MODE')) {
+    // Legacy constant for backwards compatibility
+    define('TYPO3_MODE', 'BE');
+}
+
+if (!defined('TYPO3_REQUESTTYPE')) {
+    // CLI request type
+    define('TYPO3_REQUESTTYPE', 2);
 }

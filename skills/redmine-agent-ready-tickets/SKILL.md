@@ -1,75 +1,142 @@
 ---
 name: redmine-agent-ready-tickets
-description: Turn vague, mixed-scope, or underspecified Redmine issues into implementation contracts that Claude, ChatGPT, Codex, or another coding agent can execute with minimal clarification. Use when auditing a Redmine backlog; rewriting todos, bugs, features, spikes, or epics; splitting or merging tickets; defining parent/child relationships and dependencies; adding acceptance criteria and verification commands; preparing tickets for autonomous implementation; or reviewing whether existing tickets are agent-ready.
+description: Turn queued, vague, mixed-scope, or underspecified Redmine issues into evidence-backed implementation contracts that Claude, ChatGPT, Codex, Hermes, or another coding agent can execute. Use when a user says "send to AI/KI", asks Hermes to prepare a Redmine ticket, audits an AI-preparation queue, rewrites or splits tickets, applies Wayfinder-style research/grilling/prototype/task planning, creates vertical child tickets and blocking relations, or reviews whether a ticket is ready for autonomous implementation.
+license: MIT
+compatibility: Requires Python 3, Redmine REST API access, and a filterable KI-Workflow issue custom field.
+metadata:
+  hermes:
+    tags: [redmine, ai-preparation, wayfinder, tickets, automation]
+    related_skills: [plan, spike, test-driven-development, requesting-code-review]
 ---
 
 # Redmine Agent-Ready Tickets
 
-Convert issue history and product intent into small, evidence-backed implementation contracts. Preserve why the work exists while removing ambiguity about what must be delivered and how completion will be verified.
+Turn issue history and product intent into small, evidence-backed implementation contracts. Preserve why the work exists while removing ambiguity about what must be delivered and how completion will be verified.
+
+This skill prepares work; it does not implement production code. A ticket reaches `Bereit zur KI-Umsetzung` only after the preparation gate passes.
+
+## Required configuration
+
+Provide these values through Hermes Keys, a protected environment file, or an equivalent secret manager:
+
+- `REDMINE_URL`: Redmine base URL, for example `https://track.webconsulting.at`
+- `REDMINE_API_KEY`: Redmine REST API key; never write it to a repository or ticket
+- `REDMINE_AI_WORKFLOW_FIELD_ID`: numeric ID of the filterable `KI-Workflow` issue custom field
+- `REDMINE_AI_PROJECTS`: optional comma-separated queue projects; defaults to `ideas,capexone`
 
 ## Load the supporting material
 
-- Read [references/ticket-contract.md](references/ticket-contract.md) before drafting or rewriting any ticket.
-- Read [references/restructuring-patterns.md](references/restructuring-patterns.md) when a backlog contains duplicates, research mixed with implementation, more than one independently releasable outcome, or unclear parent/child relationships.
-- Run `scripts/validate_ticket.py` against each final draft when the ticket body is available as a file.
+- Read [references/redmine-ai-workflow.md](references/redmine-ai-workflow.md) for queue states, manual and scheduled modes, Redmine operations, and failure recovery.
+- Read [references/matt-pocock-preparation-flow.md](references/matt-pocock-preparation-flow.md) before deciding between direct preparation, Wayfinder, research, grilling, prototype, spec, and vertical tickets.
+- Read [references/ticket-contract.md](references/ticket-contract.md) before drafting or rewriting any implementation ticket.
+- Read [references/restructuring-patterns.md](references/restructuring-patterns.md) when a backlog contains duplicates, research mixed with implementation, independently releasable outcomes, or unclear parent/child relationships.
+- Use `scripts/redmine_ai_queue.py` for deterministic Redmine reads and writes. Run `scripts/validate_ticket.py` against every final implementation draft.
+
+## Operating modes
+
+### Manual request
+
+Examples:
+
+- `Hermes, prepare the next Redmine ticket for AI.`
+- `Hermes, prepare Redmine #10534 for AI implementation.`
+- `Hermes, work through the Wayfinder map in #10531.`
+
+Honor a named issue. Otherwise choose the oldest queued open issue so the queue is fair. When a human decision is required, ask one question at a time and wait for the answer. Do not publish a speculative decision on the user's behalf.
+
+### Scheduled run
+
+Process at most one root issue per run. Claim it before research so concurrent jobs skip it. Scheduled work is AFK: it may inspect repositories and primary sources, resolve factual research, and write an implementation contract. It may not simulate a stakeholder answer, approve a product tradeoff, or treat silence as consent.
+
+When a material human decision remains, add one concise, high-leverage question to Redmine, set `KI-Workflow` to `Rückfrage erforderlich`, and stop. Return `[SILENT]` when no queued issue exists.
 
 ## Workflow
 
 ### 1. Establish scope and authority
 
-Identify the Redmine project, requested ticket set, target language, and whether the user asked for an audit, drafts, or live updates. Treat reading and drafting separately from changing Redmine.
+Identify the Redmine project, ticket set, target language, and whether the user requested an audit, drafts, or live updates. Treat reading and drafting separately from changing Redmine.
 
-Prefer a purpose-built Redmine connector, API, or CLI. Use browser interaction only when no suitable integration exists or the user explicitly requests it. Follow the active tool's confirmation policy before saving live changes.
+Prefer the Redmine REST API. Use browser interaction only when the API is unavailable or the user explicitly requests UI work. Never copy an API key, OAuth token, or session cookie into a prompt, repository, log, ticket, or chat message.
 
-### 2. Capture the source of truth
+Completion: the exact issue IDs, requested operation, and allowed mutation scope are known.
 
-For every issue, record:
+### 2. Claim the issue
 
-- ID, subject, tracker, status, priority, assignee, parent, relations, and custom fields
+For queued work, require `KI-Workflow = Vorbereitung angefordert`, then transition to `Vorbereitung läuft` before doing expensive work. If the value changed between selection and claim, skip the ticket rather than overwriting another worker.
+
+Use:
+
+```bash
+python3 scripts/redmine_ai_queue.py claim ISSUE_ID
+```
+
+Completion: a fresh issue read shows `Vorbereitung läuft`.
+
+### 3. Capture the source of truth
+
+For the issue, record:
+
+- ID, subject, tracker, delivery status, priority, assignee, parent, children, relations, and custom fields
 - full description, comments, attachments, and relevant history
 - linked repository, project wiki, deployment, design, ADR, or external dependency
 - the original user outcome, even if the proposed implementation is weak
 
-Do not discard useful context. Keep a local draft or change table containing old subject, new subject, structural action, and reason.
+Inspect the target repository and its local instructions when available. Verify package names, versions, APIs, compatibility, and platform limits in primary sources. Distinguish verified facts, decisions already made, proposals, and open questions.
 
-### 3. Resolve facts before writing requirements
+Completion: every requirement is traceable or explicitly marked as an unresolved decision.
 
-Inspect the target repository and its local instructions when available. Verify current package names, versions, APIs, compatibility, and platform limits in primary sources. Read relevant attachments. Distinguish facts from proposals.
+### 4. Choose the preparation path
 
-Do not turn a missing fact into an invented requirement. If the coding agent can discover it safely inside the target repository, state the discovery rule. If different answers would materially change the product, security model, or architecture, mark the ticket as blocked instead of pretending it is ready.
+Use the decision model in [references/matt-pocock-preparation-flow.md](references/matt-pocock-preparation-flow.md):
 
-### 4. Classify and restructure
+- **Direct contract** when the outcome and route fit one agent session.
+- **Research** for factual uncertainty that an AFK agent can resolve from primary sources or a repository.
+- **Prototype** when a cheap artifact is needed to decide appearance or behavior; this is HITL and must be reviewed by a human.
+- **Grilling** when stakeholder judgment is missing; ask one question at a time.
+- **Wayfinder map** when the destination is known but the route spans multiple sessions or remains foggy.
 
-Choose the correct tracker:
+Do not use Wayfinder as ceremony for a small, clear ticket. Wayfinder tickets resolve decisions; implementation tickets deliver vertical behavior.
 
-- **Bug**: observed behavior violates an existing contract; include reproduction, expected result, actual result, and regression proof.
-- **Feature**: adds a new capability; include user outcome, boundaries, acceptance criteria, and rollout implications.
-- **Spike**: resolves a decision with evidence; its deliverable is a recommendation, prototype, benchmark, or ADR—not production code.
-- **Epic/parent**: coordinates independently deliverable child tickets; do not ask an agent to implement an epic directly.
+Completion: the issue is classified as direct, research, prototype, grilling, or Wayfinder, with a written reason.
 
-Split an issue when it contains independently testable or releasable outcomes, mixes research with implementation, spans unrelated repositories, or cannot be completed in one coherent change. Prefer vertical slices over component-layer tasks. Use the decision rules in [references/restructuring-patterns.md](references/restructuring-patterns.md).
+### 5. Resolve the preparation frontier
 
-### 5. Draft the implementation contract
+For direct work, continue to the contract.
 
-Use the canonical template in [references/ticket-contract.md](references/ticket-contract.md). Adapt the formatting to the Redmine text formatter; do not paste Markdown into a Textile project without conversion.
+For a Wayfinder issue:
 
-Write requirements as observable behavior. Give the implementation agent autonomy inside explicit constraints. Name required files or architecture only when the repository or an accepted decision already establishes them.
+1. Write a concise Destination, Notes, Decisions so far, Not yet specified, and Out of scope section on the parent.
+2. Create only questions that are sharp enough to act on now as child issues.
+3. Prefix child subjects with `[Research]`, `[Grilling]`, `[Prototype]`, or `[Task]` and state the question in the body.
+4. Create children before adding native `blocks` relations because relations need real IDs.
+5. Resolve bounded research children from primary sources. Leave HITL children open for the human.
+6. Do not chart vague fog as fake tickets. Keep it under `Not yet specified` until an answer makes the question sharp.
 
-Use stable acceptance-criterion IDs such as `AC-1`. Make every criterion independently verifiable. Include exact validation commands when they are known; otherwise name the repository-standard checks the agent must discover and run.
+Never resolve more than one non-research decision ticket in one session. Expect other sessions to edit the same map.
 
-### 6. Apply the readiness gate
+Completion: the current frontier is visible in Redmine and no open child is hidden in prose.
 
-A ticket is ready only when all of these are true:
+### 6. Produce the spec and vertical ticket plan
 
-- one issue has one coherent outcome
-- the target repository or discovery rule is explicit
-- scope and non-goals prevent predictable expansion
-- dependencies and ordering are visible
-- acceptance criteria describe externally observable completion
-- tests cover success, failure, and regressions proportional to risk
-- security, data, deployment, and observability concerns are addressed or explicitly not applicable
-- no blocking product decision is hidden inside an implementation note
-- the ticket can be understood without private conversation context
+Once the route is clear, synthesize a spec with:
+
+- Problem Statement and Solution
+- numbered User Stories
+- verified Implementation Decisions
+- Testing Decisions and the highest practical test seam
+- Out of Scope and Further Notes
+
+For work that needs multiple implementation sessions, create tracer-bullet child tickets. Each child must deliver a narrow but complete path through all affected layers, fit one fresh agent session, be independently verifiable, and declare native blocking relations. Keep wide mechanical refactors as expand–migrate–contract sequences.
+
+For work that fits one session, keep one ticket instead of fragmenting it.
+
+Completion: every implementation session has one coherent outcome and visible blockers.
+
+### 7. Draft and validate the implementation contract
+
+Use [references/ticket-contract.md](references/ticket-contract.md). Adapt formatting to the Redmine text formatter; do not paste Markdown into a Textile project without conversion.
+
+Requirements must describe observable behavior. Give the implementation agent autonomy inside explicit constraints. Use stable acceptance IDs (`AC-1`, `AC-2`, …) and exact repository validation commands only after verifying them.
 
 Run:
 
@@ -77,30 +144,60 @@ Run:
 python3 scripts/validate_ticket.py path/to/ticket.txt
 ```
 
-Treat the validator as a floor, not proof of quality. Resolve every error and review warnings deliberately.
+Treat the validator as a floor. Require a readiness score of at least 85, no missing target, no hidden product decision, no mixed research/implementation scope, and no untestable acceptance criterion.
 
-### 7. Review and update Redmine
+Completion: validation passes and every warning is resolved or deliberately accepted in the preparation note.
 
-Present a compact change plan before live mutation when required by the active tool. Preserve ticket IDs where possible. Create child tickets before adding relationships that depend on their IDs. Update parent subjects and descriptions last so they can reference the final child set.
+### 8. Publish and verify
 
-After saving, reopen every changed issue and verify subject, tracker, description, hierarchy, relations, status, and any changed custom fields. Report exact issue IDs and any intentionally deferred items.
+Before replacing a description, preserve the original request under `Original request` or in an audit comment. Start AI-authored comments with:
 
-## Writing rules
+```text
+_Diese Vorbereitung wurde von KI erstellt und muss vor der Umsetzung menschlich geprüft werden._
+```
 
-- Lead with the outcome, not a tool or guessed solution.
-- Replace “improve,” “support,” “integrate,” and “make it work” with measurable behavior.
-- Do not hide research tasks such as “find the best three features” inside a build ticket; use a spike or make the decisions before drafting.
-- Avoid acceptance criteria that only say code exists, tests pass, or documentation is updated.
-- Do not require a specific class structure merely to make the ticket look precise.
-- Include source URLs and version dates when current external behavior matters.
-- Keep comments for audit history; keep the authoritative contract in the description.
+Publish the authoritative contract in the description, not across scattered comments. Set the parent or directly executable issue to `Bereit zur KI-Umsetzung` only after the readiness gate passes. Keep a Wayfinder parent at `Rückfrage erforderlich` while HITL decisions remain.
+
+Reopen every changed issue and verify its subject, tracker, description, hierarchy, relations, delivery status, and `KI-Workflow` value.
+
+Completion: a fresh API read matches the intended state and the final response names every changed issue URL.
+
+## Readiness gate
+
+A ticket is ready only when all are true:
+
+- one issue has one coherent implementation outcome
+- the target repository or deterministic discovery rule is explicit
+- scope and non-goals prevent predictable expansion
+- dependencies and ordering are visible
+- acceptance criteria describe externally observable completion
+- tests cover success, failure, and regressions proportional to risk
+- security, data, deployment, rollback, and observability are addressed or explicitly not applicable
+- no blocking product decision is hidden inside an implementation note
+- the ticket is understandable without private conversation context
+- the work fits one fresh agent session
 
 ## Output
 
 Return:
 
-1. a backlog change table with keep/rewrite/split/merge/reclassify decisions
-2. complete ticket bodies in Redmine-compatible formatting
-3. parent/child and dependency relationships
-4. readiness results and unresolved blockers
-5. live Redmine links after updates, when mutation was requested and completed
+1. issue selected and preparation path chosen
+2. verified facts, decisions, and remaining questions
+3. parent/child and blocking structure created or proposed
+4. readiness score and validator result
+5. exact Redmine mutations and links
+6. the next human action, or `[SILENT]` for an empty scheduled queue
+
+---
+
+## Credits & Attribution
+
+This skill is based on the excellent work by
+**[Matt Pocock](https://github.com/mattpocock)**.
+
+Original repository: https://github.com/mattpocock/skills
+
+**Copyright (c) Matt Pocock** - Agent skills for real engineering workflows (MIT License)
+
+Special thanks to [Matt Pocock](https://github.com/mattpocock) for his generous open-source contributions, which helped shape this skill collection.
+Adapted by webconsulting.at for this skill collection

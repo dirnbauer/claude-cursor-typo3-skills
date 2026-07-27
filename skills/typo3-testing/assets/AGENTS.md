@@ -24,7 +24,7 @@ This directory contains tests for the TYPO3 extension.
 - **TYPO3 Testing Framework** (typo3/testing-framework)
 - **PHPUnit** for assertions and test execution
 - **[Additional tools for this test type]:**
-  - Unit: PHPUnit `createMock()` / `createStub()` for test doubles
+  - Unit: Prophecy for mocking
   - Functional: CSV fixtures for database data
   - E2E: Playwright + axe-core for browser automation and accessibility
 
@@ -83,15 +83,11 @@ $this->importCSVDataSet(__DIR__ . '/../Fixtures/MyFixture.csv');
 
 ### Mocking (Unit Tests Only)
 
-Use PHPUnit's built-in test doubles. Use `createMock()` when you need to assert
-on interactions, and `createStub()` for simple return-value stubbing. (Prophecy is
-not used in this project.)
-
 ```php
-$repository = $this->createMock(UserRepository::class);
-$repository->method('findByEmail')
-    ->with('test@example.com')
-    ->willReturn($user);
+use Prophecy\PhpUnit\ProphecyTrait;
+
+$repository = $this->prophesize(UserRepository::class);
+$repository->findByEmail('test@example.com')->willReturn($user);
 ```
 
 ### Page Objects (E2E Tests Only)

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Catalog query functions for reading tool metadata
-# Assumes: Scripts are run from app root, catalog is at $ROOT/catalog
+
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/root.sh"
 
 # Get all tools with a specific tag
 catalog_get_tools_by_tag() {
   local tag="$1"
-  local catalog_dir="$ROOT/catalog"
+  local catalog_dir="$CATALOG_DIR"
 
   if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq required for catalog operations" >&2
@@ -22,7 +23,7 @@ catalog_get_tools_by_tag() {
 
 # Get all available tags
 catalog_get_all_tags() {
-  local catalog_dir="$ROOT/catalog"
+  local catalog_dir="$CATALOG_DIR"
 
   if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq required for catalog operations" >&2
@@ -35,7 +36,7 @@ catalog_get_all_tags() {
 # Check if tool has catalog entry
 catalog_has_tool() {
   local tool="$1"
-  local catalog_dir="$ROOT/catalog"
+  local catalog_dir="$CATALOG_DIR"
   [ -f "$catalog_dir/$tool.json" ]
 }
 
@@ -43,7 +44,7 @@ catalog_has_tool() {
 catalog_get_property() {
   local tool="$1"
   local property="$2"
-  local catalog_dir="$ROOT/catalog"
+  local catalog_dir="$CATALOG_DIR"
 
   if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq required for catalog operations" >&2
@@ -61,7 +62,7 @@ catalog_get_guide_property() {
   local tool="$1"
   local property="$2"
   local default="${3:-}"
-  local catalog_dir="$ROOT/catalog"
+  local catalog_dir="$CATALOG_DIR"
 
   if ! command -v jq >/dev/null 2>&1; then
     echo "$default"

@@ -266,6 +266,5 @@ Add these checks to your CI pipeline:
 
 ## Related References
 
-- `references/documentation.md` - Documentation standards
 - `references/ci-patterns.md` - CI/CD automation
 - `references/security-hardening.md` - Security patterns

@@ -125,12 +125,14 @@ func TestMain(m *testing.M) {
 import atheris
 import sys
 
+
 def TestOneInput(data):
     fdp = atheris.FuzzedDataProvider(data)
     try:
         my_function(fdp.ConsumeString(100))
     except ValueError:
         pass  # Expected errors
+
 
 atheris.Setup(sys.argv, TestOneInput)
 atheris.Fuzz()
@@ -150,6 +152,7 @@ atheris.Fuzz()
 # Use memory_profiler
 from memory_profiler import profile
 
+
 @profile
 def my_function():
     # Function code
@@ -162,9 +165,11 @@ def my_function():
 # conftest.py
 import pytest
 
+
 def pytest_configure(config):
     # Enable assertions in optimized mode
     import builtins
+
     builtins.__debug__ = True
 ```
 

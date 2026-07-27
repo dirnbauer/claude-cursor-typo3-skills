@@ -19,14 +19,14 @@ Usage:
     python3 submit-badges.py --all
 
 Authentication:
-    Set BADGE_COOKIE env var (preferred) or put cookie in /tmp/badge-cookie.txt
+    Set BADGE_COOKIE env var (preferred) or put cookie in ~/.badge-cookie.txt
     Cookie value is the _BadgeApp_session from browser DevTools.
     Write to file recommended (avoids shell quoting issues with +/=/chars).
 
     SECURITY WARNING: Session cookies are sensitive credentials.
     - NEVER hardcode cookies in source code or commit them to version control.
     - ALWAYS use the BADGE_COOKIE environment variable for automation.
-    - The cookie file (/tmp/badge-cookie.txt) should have restrictive permissions (0600).
+    - The cookie file (~/.badge-cookie.txt) should have restrictive permissions (0600).
     - Cookies are ephemeral and rotate on each server response; treat as secrets.
 
 Verification (use /projects/ NOT /en/projects/ for fresh data):
@@ -34,12 +34,12 @@ Verification (use /projects/ NOT /en/projects/ for fresh data):
       jq '{badge_level, badge_percentage_0, badge_percentage_1, badge_percentage_2}'
 """
 
+import http.cookiejar
 import json
 import os
 import re
 import sys
 import time
-import http.cookiejar
 import urllib.parse
 import urllib.request
 
@@ -209,7 +209,7 @@ def submit_level(opener, project_id, level, data_file):
 
     # Step 1: Get edit page for CSRF tokens + lock version
     print("  Fetching edit page...")
-    auth_token, csrf_token, lock_version = get_edit_page(opener, project_id, level)
+    auth_token, _csrf_token, lock_version = get_edit_page(opener, project_id, level)
 
     if not auth_token:
         print("  ERROR: Could not get auth token - cookie expired?")
@@ -245,7 +245,7 @@ def main():
     # SECURITY: Prefer environment variable for cookie to avoid file-based risks.
     cookie = os.environ.get("BADGE_COOKIE", "")
     if not cookie:
-        cookie_file = "/tmp/badge-cookie.txt"
+        cookie_file = os.path.expanduser("~/.badge-cookie.txt")
         if os.path.exists(cookie_file):
             # Warn if cookie file has overly permissive permissions
             file_mode = oct(os.stat(cookie_file).st_mode & 0o777)
@@ -258,11 +258,11 @@ def main():
                 cookie = f.read().strip()
         if not cookie:
             print(
-                "ERROR: Set BADGE_COOKIE env var or put cookie in /tmp/badge-cookie.txt"
+                "ERROR: Set BADGE_COOKIE env var or put cookie in ~/.badge-cookie.txt"
             )
             sys.exit(1)
 
-    opener, cj = make_opener(cookie)
+    opener, _cj = make_opener(cookie)
 
     if len(sys.argv) >= 2 and sys.argv[1] == "--all":
         for name, config in PROJECTS.items():

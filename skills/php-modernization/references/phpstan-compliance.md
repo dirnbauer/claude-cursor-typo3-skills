@@ -72,6 +72,54 @@ public function processUsers(array $items): void
 }
 ```
 
+### Consistent-Constructor Subclass Collisions
+
+`@phpstan-consistent-constructor` requires every subclass constructor to stay call-compatible with the base. Adding a **new trailing parameter** to such a base constructor collides with any subclass that already appends its own parameters — the same positional slot now carries two different types:
+
+```php
+// Error: Parameter #14 $toolChoice (string|null) of ChildOptions::__construct
+//        is not contravariant with parameter #14 $suppressRequestCount (bool|null)
+//        of ParentOptions::__construct   (method.childParameterType)
+
+/** @phpstan-consistent-constructor */
+class ParentOptions
+{
+    public function __construct(
+        // …13 existing params…
+        private ?bool $suppressRequestCount = null,  // new — now slot #14
+    ) {}
+}
+
+class ChildOptions extends ParentOptions
+{
+    public function __construct(
+        // …same 13…
+        private ?string $toolChoice = null,          // was slot #14
+    ) {
+        parent::__construct(/* … */);
+    }
+}
+```
+
+**Fix — add a fluent wither, not a constructor parameter.** The constructor signature stays stable (no subclass collision) and the field stays immutable-by-clone:
+
+```php
+class ParentOptions
+{
+    // constructor unchanged
+    private ?bool $suppressRequestCount = null;
+
+    public function withSuppressRequestCount(bool $value): static
+    {
+        $clone = clone $this;
+        $clone->suppressRequestCount = $value;
+        return $clone;
+    }
+}
+```
+
+Rule of thumb: on a `@phpstan-consistent-constructor` type that has subclasses, evolve state through `with*()` withers, never through new constructor parameters. See `references/immutability-boundaries.md` for the wither/clone pattern.
+
 ### Return Type Errors
 
 ```php
@@ -171,6 +219,38 @@ public function getItems(): array
 /** @return array<string, mixed> */
 public function getConfig(): array
 ```
+
+### Strict-Rule Bans: short-ternary, `@`-suppression, `(string) $mixed`
+
+Level 9/10 plus a strict ruleset (`phpstan-strict-rules`, or the `ergebnis`
+custom rules) reject three idioms that pass at lower levels. New code trips them
+repeatedly; the compliant rewrites:
+
+```php
+// ternary.shortNotAllowed — the short ternary is banned:
+$rows = glob($p) ?: [];                       // ✗
+$rows = glob($p);                             // ✓
+if ($rows === false) { $rows = []; }
+
+// ergebnis.noErrorSuppression — the "@" operator is banned. Wrap the
+// warning-emitter and handle the failure explicitly (also catches the case
+// where an error handler turns the warning into an exception):
+$h = @proc_open($cmd, $spec, $pipes);         // ✗
+$h = false;                                   // ✓ init first, so the check is safe if proc_open throws
+try { $h = proc_open($cmd, $spec, $pipes); }
+catch (\Throwable $e) { /* degrade */ }
+if (!\is_resource($h)) { /* degrade */ }
+// For unlink/file ops, guard instead of suppress: if (is_file($f)) { unlink($f); }
+
+// cast.string — casting a mixed to string is unsafe (it could be an array):
+$s = (string) $config->get($key);             // ✗
+$raw = $config->get($key);                    // ✓ string-only intent (config keys);
+$s = \is_string($raw) ? $raw : '';            //   use is_scalar($raw) ? (string) $raw : '' to keep int/bool
+```
+
+Run the static analyzer **after** adding the test files, not before — tests are
+analyzed too, so a `(string) $mixed` cast or an offset-on-possibly-empty in a
+fresh test file fails CI even though the pre-test run was green.
 
 ## Type Aliases and Custom Types
 

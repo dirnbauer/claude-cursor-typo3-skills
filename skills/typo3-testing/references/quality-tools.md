@@ -90,6 +90,28 @@ This file explicitly lists all PHPStan plugin neon files that `extension-install
 
 **Do NOT mix both approaches** — if `extension-installer` is active AND you include `includes-no-extension-installer.neon`, PHPStan will error about duplicate includes.
 
+#### Symptom when the includes are missing (`InvocationStubber::with()`)
+
+If PHPStan runs in such a worktree **without** the explicit-includes config — e.g. after a `composer install --no-scripts` fallback, or in an extension that ships no `phpstan.no-plugins.neon` to point at — `phpstan-phpunit` is not active and every ordinary mock chain trips a false error:
+
+```text
+Call to an undefined method PHPUnit\Framework\MockObject\InvocationStubber::with().
+Cannot call method willReturn() on mixed.
+```
+
+on lines like `$this->createMock(X::class)->method('m')->with(...)->willReturn(...)`. These are **not real** and are **not caused by your change** — the tell is that only a handful of files show them while hundreds of other mock-using tests pass.
+
+Prefer the `--no-plugins` + explicit-includes approach above. When the repo has no no-plugins config to point PHPStan at, **verify with a controlled stash**:
+
+```bash
+git stash push -u          # revert your change -> clean tree
+# run PHPStan -> note the identical baseline error set (same untouched test files)
+git stash pop
+# re-run PHPStan -> confirm your change keeps the count unchanged (adds zero)
+```
+
+CI installs in a real (non-worktree) checkout where the hooks install cleanly and `extension-installer` registers the plugins, so these errors never appear there — **CI is authoritative** for the full-tree PHPStan result.
+
 ### If NOT using typo3-ci-workflows
 
 For extensions that cannot use the centralized package, install tools individually:
@@ -134,7 +156,7 @@ parameters:
 
 ```bash
 # Via runTests.sh
-Build/Scripts/runTests.sh -s phpstan
+Build/Scripts/runTests.sh phpstan
 
 # Directly
 .Build/bin/phpstan analyse -c Build/phpstan.neon
@@ -362,9 +384,13 @@ return RectorConfig::configure()
 
 ```bash
 # Dry run (show changes)
-.Build/bin/rector process --dry-run
+Build/Scripts/runTests.sh rector
 
 # Apply changes
+Build/Scripts/runTests.sh rector:fix
+
+# Directly
+.Build/bin/rector process --dry-run
 .Build/bin/rector process
 ```
 
@@ -441,10 +467,10 @@ return (new PhpCsFixer\Config())
 
 ```bash
 # Check only (dry run)
-Build/Scripts/runTests.sh -s cgl -n
+Build/Scripts/runTests.sh cgl
 
 # Fix files
-Build/Scripts/runTests.sh -s cgl
+Build/Scripts/runTests.sh cgl:fix
 
 # Directly
 .Build/bin/php-cs-fixer fix --config=Build/.php-cs-fixer.php --dry-run --diff
@@ -503,7 +529,7 @@ extensions:
 vendor/bin/phplint
 
 # Via runTests.sh
-Build/Scripts/runTests.sh -s lint
+Build/Scripts/runTests.sh lint
 
 # Specific directory
 vendor/bin/phplint Classes/
@@ -516,13 +542,13 @@ With typo3-ci-workflows, use `Build/Scripts/runTests.sh` as the entry point:
 ```json
 {
     "scripts": {
-        "ci:cgl": "Build/Scripts/runTests.sh -s cgl",
-        "ci:test:php:cgl": "Build/Scripts/runTests.sh -s cgl -n",
-        "ci:test:php:phpstan": "Build/Scripts/runTests.sh -s phpstan",
-        "ci:test:php:unit": "Build/Scripts/runTests.sh -s unit",
-        "ci:test:php:functional": "Build/Scripts/runTests.sh -s functional",
-        "ci:test:php:fuzz": "Build/Scripts/runTests.sh -s fuzz",
-        "ci:mutation": "Build/Scripts/runTests.sh -s mutation",
+        "ci:cgl": "Build/Scripts/runTests.sh cgl:fix",
+        "ci:test:php:cgl": "Build/Scripts/runTests.sh cgl",
+        "ci:test:php:phpstan": "Build/Scripts/runTests.sh phpstan",
+        "ci:test:php:unit": "Build/Scripts/runTests.sh unit",
+        "ci:test:php:functional": "Build/Scripts/runTests.sh functional",
+        "ci:test:php:fuzz": "Build/Scripts/runTests.sh fuzz",
+        "ci:mutation": "Build/Scripts/runTests.sh mutation",
         "ci:test:php:all": [
             "@ci:test:php:unit",
             "@ci:test:php:functional"

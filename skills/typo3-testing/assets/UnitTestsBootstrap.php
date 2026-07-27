@@ -74,3 +74,11 @@ require_once $autoloadFile;
 if (!defined('TYPO3')) {
     define('TYPO3', true);
 }
+
+if (!defined('TYPO3_MODE')) {
+    define('TYPO3_MODE', 'BE');
+}
+
+if (!defined('TYPO3_REQUESTTYPE')) {
+    define('TYPO3_REQUESTTYPE', 2);
+}

@@ -3,6 +3,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$DIR/lib/root.sh"
 . "$DIR/lib/install_strategy.sh"
 
 # Load nvm if available (needed for node-based package managers)
@@ -18,7 +19,7 @@ if [ -z "$TOOL" ]; then
   exit 1
 fi
 
-CATALOG_FILE="$DIR/../catalog/$TOOL.json"
+CATALOG_FILE="$CATALOG_DIR/$TOOL.json"
 if [ ! -f "$CATALOG_FILE" ]; then
   echo "Error: Catalog file not found: $CATALOG_FILE" >&2
   exit 1
@@ -83,4 +84,4 @@ printf "[%s] after:  %s\n" "$TOOL" "${after:-<none>}"
 if [ -n "$path" ]; then printf "[%s] path:   %s\n" "$TOOL" "$path"; fi
 
 # Refresh snapshot after successful installation
-refresh_snapshot "$TOOL"
+refresh_snapshot "$TOOL" || true

@@ -373,6 +373,21 @@ for what's actually available.
   run: vendor/bin/rector process --dry-run --ansi
 ```
 
+### DEAD_CODE rewrites can change intent — verify, don't auto-apply
+
+`SetList::DEAD_CODE` includes `RemoveDefaultArgumentValueRector`, which strips a
+trailing argument whose value equals the parameter's default. That is wrong when
+the argument is *meaningful* and only coincidentally equals a default — e.g.
+`verifyChain($from, $to, 0)` where the third parameter defaults to a configured
+value and `0` is passed to disable it: Rector rewrites the call to
+`verifyChain()`, silently restoring the floor. Pass such an argument **by name**
+(`verifyChain(minEpoch: 0)`) — the rule leaves named arguments alone. (The same
+set also rewrites `$x !== null` to `$x instanceof T` on a `?T` return; that one
+is a safe equivalent — apply it and add the import.)
+
+A rewrite from a lossy set (`DEAD_CODE`, `CODE_QUALITY`) is a suggestion to
+verify against intent, not an edit to apply blind.
+
 ## PHP-CS-Fixer (Coding Style)
 
 Enforces coding standards automatically.
@@ -541,3 +556,55 @@ vendor/bin/phpstan analyse --no-progress
 ```
 
 Make this part of the agent's verification step, not optional.
+
+## Run the toolchain the way CI does (version parity)
+
+PHP-CS-Fixer (and, less often, PHPStan) behaves in a **PHP-version-specific**
+way: which fixers apply and how they format depends on the PHP version the
+binary runs under. So `php vendor/bin/php-cs-fixer fix --dry-run` on a *newer*
+local PHP can report a file clean while CI — running on the project's *pinned,
+older* PHP — rewrites it and fails the gate. (Seen in practice: a closure
+formatted `fn (` passed local PHP 8.5 but CI's PHP 8.2 demanded `fn(`, costing a
+red Quality gate and a force-push.)
+
+Run quality gates through the project's own runner so the PHP version matches CI:
+
+- If the repo ships a wrapper — `make code-style` / `make phpstan`, a composer
+  script (`composer ci:cs`, `composer ci:test:php:cs`), or a Docker-based
+  runner — use it. It pins the PHP version *and* the config CI uses.
+- If you must call the binary directly, invoke it under the same PHP version CI
+  uses (e.g. `docker run --rm -v "$PWD":/app -w /app php:8.2-cli vendor/bin/php-cs-fixer fix --dry-run`),
+  not your local default interpreter.
+- `PHP_CS_FIXER_IGNORE_ENV` only silences the version-mismatch *warning*; it does
+  **not** make a newer PHP behave like the pinned one.
+
+Make "run the gate the way CI runs it" part of the verification step — a
+locally-green cs-fixer/PHPStan is not proof until it has run on CI's toolchain.
+
+## SAST maintainability refactors can silently drop a branch
+
+SAST maintainability/complexity findings — SonarCloud `S3776` (cognitive
+complexity) and `S1142` (too many `return` statements) — are usually "fixed" by
+**extracting** a helper method or **reordering** control flow. That edit is
+**behavior-risky in a way the other gates cannot see**: an extraction can
+silently drop a branch — e.g. a fallback-to-default path taken on an empty or
+invalid response. PHP-CS-Fixer and PHPStan stay green (the shape is still
+type-correct and well-formatted), and a passing unit suite proves nothing if
+that branch was never covered. (Seen in practice: a 2026 complexity cleanup
+extracted a method and lost an empty-response fallback; every static gate and
+the existing unit suite passed — only a human code reviewer caught it.)
+
+Before trusting green gates on a complexity refactor:
+
+- **Diff the control-flow branches** of the refactored method against the
+  original. Trace every logical path to ensure all outcomes are preserved, even
+  if the structural count of `return` or `else` statements has changed.
+- **Add a unit test for the previously-uncovered branch FIRST**, watch it pass
+  against the original, then refactor. A test that only covers the happy path
+  cannot protect the fallback you are about to move.
+
+Often the better call is to **accept** subjective complexity findings on
+controller / service / command layers rather than perform a risky extraction.
+Mark them won't-fix in the SAST UI with a short comment explaining why the
+method's structure is intentional — a deliberate "review as safe" beats a
+mechanical refactor that ships a regression.

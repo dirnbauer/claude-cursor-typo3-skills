@@ -553,6 +553,42 @@ jobs:
             --filter 'Encryption|Crypto|Secret|Vault'
 ```
 
+## Randomized Property Tests — Deterministic Seeding
+
+Redaction, sanitizer, and streaming-window code is best proven with a randomized
+property test (generate many raw inputs, assert an invariant such as
+`concat(redactedChunks) === redact(fullRaw)`). Such a test must be **reproducible**
+on failure — but do not reach for `srand()` + `mt_rand()`:
+
+- **`mt_rand()` gets rewritten by CGL.** The coding-standards fixer (php-cs-fixer
+  `random_api_migration`) rewrites `mt_rand()` → `random_int()`. `random_int()` is
+  a CSPRNG and **ignores `srand()`**, so a seed you set has no effect after the
+  fixer runs. The test still passes locally (before the fixer) and becomes silently
+  non-deterministic in CI (after the fixer) — a flake you cannot reproduce.
+
+Use a hand-rolled deterministic generator in the test instead — it survives the
+fixer and gives a fixed sequence per seed. Prefer a hash-based generator: it is
+100% portable (no integer-overflow / float-cast platform dependence a raw LCG has
+on 32-bit PHP) and just as simple:
+
+```php
+$seed = 'fixed-seed';
+$counter = 0;
+$roll = static function () use (&$counter, $seed): int {
+    // 7 hex chars = 28 bits, always fits a signed int on 32- and 64-bit PHP
+    return (int) hexdec(substr(hash('sha256', $seed . $counter++), 0, 7));
+};
+
+for ($i = 0; $i < 1000; $i++) {
+    $raw = $this->randomPayload($roll);        // build input from $roll(), not mt_rand()
+    self::assertSame(redact($raw), implode('', $this->streamThrough($raw)));
+}
+```
+
+**Rule:** never depend on `srand()`/`mt_rand()` determinism in a test when CGL runs
+in the gate. A deterministic hash-based generator (or a fixed data provider) is the
+portable choice.
+
 ## Resources
 
 - [libsodium Documentation](https://doc.libsodium.org/)

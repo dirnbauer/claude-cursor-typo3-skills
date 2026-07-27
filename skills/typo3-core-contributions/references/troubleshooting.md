@@ -464,7 +464,7 @@ git push origin HEAD:refs/for/main
 # Local version
 php -v
 
-# CI uses multiple versions (8.2, 8.3, 8.4)
+# CI uses multiple versions (7.4, 8.0, 8.1, 8.2)
 # Ensure code compatible with all
 ```
 
@@ -473,7 +473,7 @@ php -v
 # Using Docker
 docker run --rm -v $(pwd):/app php:8.2-cli composer test
 
-docker run --rm -v $(pwd):/app php:8.4-cli composer test
+docker run --rm -v $(pwd):/app php:8.1-cli composer test
 ```
 
 **Check CI logs carefully**:

@@ -46,13 +46,14 @@ func secureServer() *http.Server {
 import ssl
 import http.server
 
+
 def create_secure_context():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.maximum_version = ssl.TLSVersion.TLSv1_3
 
     # Load certificates
-    context.load_cert_chain('server.crt', 'server.key')
+    context.load_cert_chain("server.crt", "server.key")
 
     # Disable insecure options
     context.options |= ssl.OP_NO_SSLv2

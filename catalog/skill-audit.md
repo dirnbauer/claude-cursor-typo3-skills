@@ -344,7 +344,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/context7-skill
 - Frontmatter name: context7
-- SKILL.md lines: 102
+- SKILL.md lines: 96
 
 **Pass 1: Structure**
 - No pass 1 issues found.
@@ -568,7 +568,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/enterprise-readiness-skill
 - Frontmatter name: enterprise-readiness
-- SKILL.md lines: 84
+- SKILL.md lines: 83
 
 **Pass 1: Structure**
 - No pass 1 issues found.
@@ -1352,7 +1352,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/security-audit-skill
 - Frontmatter name: security-audit
-- SKILL.md lines: 105
+- SKILL.md lines: 75
 
 **Pass 1: Structure**
 - No pass 1 issues found.
@@ -1640,7 +1640,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/typo3-conformance-skill
 - Frontmatter name: typo3-conformance
-- SKILL.md lines: 96
+- SKILL.md lines: 97
 
 **Pass 1: Structure**
 - No pass 1 issues found.
@@ -1736,7 +1736,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/typo3-extension-upgrade-skill
 - Frontmatter name: typo3-extension-upgrade
-- SKILL.md lines: 93
+- SKILL.md lines: 95
 
 **Pass 1: Structure**
 - No pass 1 issues found.
@@ -1960,7 +1960,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/typo3-testing-skill
 - Frontmatter name: typo3-testing
-- SKILL.md lines: 106
+- SKILL.md lines: 107
 
 **Pass 1: Structure**
 - No pass 1 issues found.
@@ -2024,7 +2024,7 @@ This is a three-pass audit inspired by Anthropic's `skill-creator` skill:
 - Source owner: Netresearch
 - Source URL: https://github.com/netresearch/typo3-vite-skill
 - Frontmatter name: typo3-vite
-- SKILL.md lines: 61
+- SKILL.md lines: 65
 
 **Pass 1: Structure**
 - No pass 1 issues found.

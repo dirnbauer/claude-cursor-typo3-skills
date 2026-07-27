@@ -101,8 +101,8 @@ ddev config --database=mariadb:10.6
 ```
 
 **PHP Version Notes**:
-- TYPO3 v14: PHP 8.2, 8.3, 8.4, 8.5
-- TYPO3 v13: PHP 8.2, 8.3, 8.4
+- TYPO3 v14: PHP 8.2, 8.3, 8.4
+- TYPO3 v13: PHP 8.1, 8.2, 8.3
 - Check `composer.json` for exact requirements
 
 ### Step 7: Configure DDEV Environment Variables
@@ -161,9 +161,8 @@ Project can be reached at https://t3coredev-14-php8-4.ddev.site
 ddev exec 'touch /var/www/html/FIRST_INSTALL'
 
 # Enable Install Tool
-ddev exec 'mkdir -p /var/www/html/var/transient'
-ddev exec 'touch /var/www/html/var/transient/ENABLE_INSTALL_TOOL'
-ddev exec 'echo "KEEP_FILE" > /var/www/html/var/transient/ENABLE_INSTALL_TOOL'
+ddev exec 'touch /var/www/html/typo3conf/ENABLE_INSTALL_TOOL'
+ddev exec 'echo "KEEP_FILE" > /var/www/html/typo3conf/ENABLE_INSTALL_TOOL'
 ```
 
 **File purposes**:
@@ -198,7 +197,7 @@ ddev typo3 setup \
 - Database tables and schema
 - Backend admin user account
 - Basic TYPO3 configuration
-- config/system/settings.php and config/system/additional.php
+- AdditionalConfiguration.php
 
 ### Step 12: Activate Core Extensions
 
@@ -542,8 +541,8 @@ ddev restart
 # Check database is running
 ddev describe
 
-# Verify credentials in config/system/settings.php
-ddev exec 'cat config/system/settings.php | grep -i -A5 db'
+# Verify credentials in LocalConfiguration.php
+ddev exec 'cat typo3conf/LocalConfiguration.php | grep -A5 DB'
 
 # Should show: host=db, username=db, password=db, database=db
 ```
@@ -644,8 +643,8 @@ Examples:
 
 | TYPO3 Version | PHP Versions | Branch | Status |
 |---------------|--------------|--------|--------|
-| v14 (main) | 8.2, 8.3, 8.4, 8.5 | main | Development |
-| v13 (LTS) | 8.2, 8.3, 8.4 | 13.4 | Active |
+| v14 (main) | 8.2, 8.3, 8.4 | main | Development |
+| v13 (LTS) | 8.1, 8.2, 8.3 | 13.4 | Active |
 | v12 (ELTS) | 8.1, 8.2 | 12.4 | Security only |
 
 ### Default Credentials

@@ -58,6 +58,23 @@ await page.setViewportSize({ width: 1440, height: 1050 });
 Capture at the wider viewport, then crop the width down to the 1400px target —
 the 40px of slack is why the floor is 1440, not 1400. Don't shrink the window to crop.
 
+**Backend module content lives inside an `iframe` — `fullPage` won't capture it.**
+The TYPO3 backend renders each module in an iframe that scrolls internally, so a
+`fullPage: true` screenshot captures only the outer document (≈ the viewport
+height) and clips the module's lower content — trace output, a completed form,
+the answer panel. To capture a tall module view (e.g. a config form *and* its
+result) in one shot, make the **viewport itself tall** and take a normal
+(non-fullPage) screenshot:
+
+```js
+// Capture config + output together: tall viewport, NOT fullPage.
+await page.setViewportSize({ width: 1440, height: 1750 });
+await page.screenshot({ path: 'Documentation/Images/Usage/ModuleRun.png' }); // no fullPage
+```
+
+Verify the result height afterwards — a 1440×900 file when you expected a long
+page means `fullPage` silently caught only the outer frame.
+
 ### File Location
 
 Store images in the `Documentation/Images/` directory, organized by section:

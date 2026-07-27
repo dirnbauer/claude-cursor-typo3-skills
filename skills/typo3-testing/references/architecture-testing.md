@@ -5,64 +5,50 @@ PHP Architecture Tester (phpat) enforces architectural rules through automated t
 ## Installation
 
 ```bash
-composer require --dev phpat/phpat
+composer require --dev carlosas/phpat
 ```
-
-`phpat/phpat` is a PHPStan extension — it runs as part of PHPStan analysis, not as a standalone PHPUnit suite.
 
 ## Configuration
 
-Create a rule class (e.g. `Tests/Architecture/ArchitectureTest.php`) using the PHPStan-extension API. Each test method returns a rule built with `PHPat::rule()`:
+Create `phpat.php` in project root:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Vendor\Extension\Tests\Architecture;
+use PhpAT\Rule\Rule;
+use PhpAT\Selector\Selector;
+use PhpAT\Test\ArchitectureTest;
 
-use PHPat\Selector\Selector;
-use PHPat\Test\Builder\BuildStep;
-use PHPat\Test\PHPat;
-
-final class ArchitectureTest
+final class ArchitectureTests extends ArchitectureTest
 {
-    public function testServicesDoNotDependOnControllers(): BuildStep
+    public function testServicesDoNotDependOnControllers(): Rule
     {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace('Vendor\Extension\Service'))
-            ->shouldNotDependOn()
-            ->classes(Selector::inNamespace('Vendor\Extension\Controller'));
+        return $this->newRule
+            ->classesThat(Selector::haveClassName('*Service'))
+            ->mustNotDependOn()
+            ->classesThat(Selector::haveClassName('*Controller'))
+            ->build();
     }
 
-    public function testDomainDoesNotDependOnInfrastructure(): BuildStep
+    public function testDomainDoesNotDependOnInfrastructure(): Rule
     {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace('Vendor\Extension\Domain'))
-            ->shouldNotDependOn()
-            ->classes(Selector::inNamespace('Vendor\Extension\Infrastructure'));
+        return $this->newRule
+            ->classesThat(Selector::havePath('Domain/*'))
+            ->mustNotDependOn()
+            ->classesThat(Selector::havePath('Infrastructure/*'))
+            ->build();
     }
 
-    public function testEventsAreReadonly(): BuildStep
+    public function testEventsAreReadonly(): Rule
     {
-        return PHPat::rule()
-            ->classes(Selector::inNamespace('Vendor\Extension\Event'))
-            ->shouldBeReadonly();
+        return $this->newRule
+            ->classesThat(Selector::havePath('Event/*'))
+            ->mustBeReadonly()
+            ->build();
     }
 }
-```
-
-Register the rule class as a PHPStan service and include the phpat extension in `phpstan.neon`:
-
-```neon
-includes:
-    - .Build/vendor/phpat/phpat/extension.neon
-
-services:
-    -
-        class: Vendor\Extension\Tests\Architecture\ArchitectureTest
-        tags:
-            - phpat.test
 ```
 
 ## TYPO3 Extension Rules
@@ -70,67 +56,60 @@ services:
 ### Layer Constraints
 
 ```php
-public function testDomainIsIsolated(): BuildStep
+public function testCleanArchitecture(): Rule
 {
-    return PHPat::rule()
-        ->classes(Selector::inNamespace('Vendor\Extension\Domain'))
-        ->shouldNotDependOn()
-        ->classes(
-            Selector::inNamespace('Vendor\Extension\Controller'),
-            Selector::inNamespace('Vendor\Extension\Command'),
-        );
+    return $this->newRule
+        ->classesThat(Selector::havePath('Classes/Domain/*'))
+        ->mustNotDependOn()
+        ->classesThat(Selector::havePath('Classes/Controller/*'))
+        ->andClassesThat(Selector::havePath('Classes/Command/*'))
+        ->build();
 }
 ```
 
 ### Service Layer Rules
 
 ```php
-public function testServicesHaveInterface(): BuildStep
+public function testServicesHaveInterface(): Rule
 {
-    return PHPat::rule()
-        ->classes(Selector::classname('/.*Service$/', true))
-        ->excluding(Selector::classname('/.*Interface$/', true))
-        ->shouldImplement()
-        ->classes(Selector::classname('/.*Interface$/', true));
+    return $this->newRule
+        ->classesThat(Selector::haveClassName('*Service'))
+        ->excludingClassesThat(Selector::haveClassName('*Interface'))
+        ->mustImplement()
+        ->classesThat(Selector::haveClassName('*Interface'))
+        ->build();
 }
 ```
 
 ## Running Tests
 
-phpat rules are evaluated by PHPStan. Run them via the `phpstan` suite:
-
 ```bash
-# Via runTests.sh
-Build/Scripts/runTests.sh -s phpstan
+# Via PHPUnit
+vendor/bin/phpunit --testsuite Architecture
 
-# Directly
-.Build/bin/phpstan analyse
+# Via runTests.sh
+Build/Scripts/runTests.sh -s architecture
 ```
 
-## PHPStan Registration
+## PHPUnit Configuration
 
-phpat has no PHPUnit testsuite. Register the rule class as a PHPStan service and include the extension (see Configuration above):
+Add to `phpunit.xml`:
 
-```neon
-includes:
-    - .Build/vendor/phpat/phpat/extension.neon
-
-services:
-    -
-        class: Vendor\Extension\Tests\Architecture\ArchitectureTest
-        tags:
-            - phpat.test
+```xml
+<testsuite name="Architecture">
+    <file>phpat.php</file>
+</testsuite>
 ```
 
 ## Common Rules
 
 | Rule | Purpose |
 |------|---------|
-| `shouldNotDependOn` | Prevent unwanted dependencies |
-| `shouldImplement` | Enforce interface usage |
-| `shouldBeReadonly` | Enforce immutability (PHP 8.2+) |
-| `shouldBeFinal` | Prevent inheritance |
-| `shouldNotExtend` | Restrict inheritance hierarchies |
+| `mustNotDependOn` | Prevent unwanted dependencies |
+| `mustImplement` | Enforce interface usage |
+| `mustBeReadonly` | Enforce immutability (PHP 8.2+) |
+| `mustBeFinal` | Prevent inheritance |
+| `mustNotConstruct` | Enforce DI |
 
 ## Security-Critical Extensions
 

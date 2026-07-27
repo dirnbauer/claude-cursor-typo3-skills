@@ -9,7 +9,7 @@
 
 includes:
     - .Build/vendor/phpstan/phpstan/conf/bleedingEdge.neon
-    # Architecture testing (requires phpat/phpat)
+    # Architecture testing (requires carlosas/phpat)
     - .Build/vendor/phpat/phpat/extension.neon
     - phpstan-baseline.neon
     - phpat.neon

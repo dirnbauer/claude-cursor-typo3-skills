@@ -285,7 +285,7 @@ rm -rf Documentation-GENERATED-temp/
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | New page not in menu | Missing from `toctree` | Add to parent `Index.rst` toctree directive |
-| Page renders blank | Indentation error | Check 4-space indent for directive content |
+| Page renders blank | Indentation error | Check 3-space indent for directive content |
 | Code block not highlighted | Missing language | Add language: `.. code-block:: php` |
 | Directive ignored | Missing blank line | Add blank line before and after directive |
 

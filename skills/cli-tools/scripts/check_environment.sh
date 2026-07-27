@@ -89,7 +89,11 @@ check_duplicates() {
 
     for tool in "${tools[@]}"; do
         local paths
-        paths=$(type -a "$tool" 2>/dev/null | grep -c "is" || echo 0)
+        # `type -p -a` prints one absolute path per executable found, so wc -l is
+        # the install count — locale-independent, unlike parsing `type -a`'s prose
+        # (which localizes "is"/"ist"/"est" and broke the count in non-English
+        # locales). `|| true` guards the empty-result case under set -o pipefail.
+        paths=$(type -p -a "$tool" 2>/dev/null | wc -l | tr -d ' ' || true)
         if [ "$paths" -gt 1 ]; then
             log_warn "$tool has multiple installations:"
             type -a "$tool" 2>/dev/null | head -5
@@ -178,10 +182,14 @@ run_audit() {
     echo "═══════════════════════════════════════════════"
     echo ""
 
-    check_path
+    # check_path/check_duplicates return their issue count by design (not a
+    # fatal error); under `set -e` a bare call aborts run_audit at the first
+    # issue found instead of completing the rest of the audit, the same
+    # hazard the check_tool calls below are already guarded against.
+    check_path || true
     echo ""
 
-    check_duplicates
+    check_duplicates || true
     echo ""
 
     check_package_managers

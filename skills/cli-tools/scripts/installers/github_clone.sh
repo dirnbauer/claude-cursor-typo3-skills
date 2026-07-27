@@ -3,6 +3,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$DIR/lib/root.sh"
 . "$DIR/lib/install_strategy.sh"
 
 TOOL="${1:-}"
@@ -13,7 +14,7 @@ fi
 
 ACTION="${2:-install}"
 
-CATALOG_FILE="$DIR/../catalog/$TOOL.json"
+CATALOG_FILE="$CATALOG_DIR/$TOOL.json"
 if [ ! -f "$CATALOG_FILE" ]; then
   echo "[$TOOL] Error: Catalog file not found: $CATALOG_FILE" >&2
   exit 1
@@ -87,4 +88,4 @@ printf "[%s] after:  %s\n" "$TOOL" "${after:-<unknown>}"
 printf "[%s] path:   %s\n" "$TOOL" "$CLONE_PATH"
 
 # Refresh snapshot after successful installation
-refresh_snapshot "$TOOL"
+refresh_snapshot "$TOOL" || true

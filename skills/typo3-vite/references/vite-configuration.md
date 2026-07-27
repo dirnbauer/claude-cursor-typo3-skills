@@ -91,7 +91,7 @@ export default defineConfig({
         port: 5173,
         strictPort: true,
         origin: 'http://localhost:5173',
-        // Required for Vite 7.3+ / 8.x when accessed via reverse proxy (Traefik etc.)
+        // Required (all Vite 7.x/8.x) when accessed via reverse proxy (Traefik etc.)
         // Without these, the dev server returns HTTP 403 "Blocked request" for any
         // host header other than 'localhost' — even if the host appears to be
         // routed correctly. true = allow all hosts (use array for narrower scope).
@@ -106,10 +106,13 @@ export default defineConfig({
 > earlier keys with later ones, so two `server: { ... }` blocks lose the first
 > one's options without warning. If you add `allowedHosts`, put it inside the
 > existing `server` block — do not create a second one.
-
-> **Vite 7.1.x quirk.** Versions before 7.3 do not enforce host-header checks
-> by default, so a missing `allowedHosts` works "by accident". Upgrading to
-> 7.3+ or 8.x will break HMR behind a proxy unless `allowedHosts` is set.
+>
+> **Not a version-specific quirk.** Host-header enforcement isn't a 7.x
+> cutoff -- it's been the default since the fix for
+> [GHSA-vg6x-rcgg-rjx6](https://github.com/vitejs/vite/security/advisories/GHSA-vg6x-rcgg-rjx6)
+> (CVE-2025-24010), which landed in Vite 4.5.6, 5.4.12, and 6.0.9. Every
+> Vite 7.x/8.x release inherits it, so `allowedHosts` is required on any
+> supported version once you're accessed via a non-`localhost` host.
 
 ## Entrypoints
 

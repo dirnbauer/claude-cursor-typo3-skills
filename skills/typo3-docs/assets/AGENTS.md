@@ -130,7 +130,7 @@ Reference it with :ref:`my-section-label` or :ref:`custom text <my-section-label
 
 ```rst
 :php:`ClassName` - PHP class
-:typoscript:`config.tx_myext` - TypoScript
+:ts:`config.tx_myext` - TypoScript
 :file:`Configuration/TCA/` - File path
 :bash:`composer require` - Shell command
 ```
@@ -206,14 +206,15 @@ Term
 ### Render Documentation
 
 ```bash
-# Using Docker (recommended) - run from the project root
+# Using Docker (recommended)
+cd Documentation
 docker run --rm --pull always \
   -v $(pwd):/project \
   ghcr.io/typo3-documentation/render-guides:latest \
   --config=Documentation
 
 # View output
-open Documentation-GENERATED-temp/Index.html
+open Documentation-GENERATED-temp/Result/project/0.0.0/Index.html
 ```
 
 ### Validate Documentation
@@ -450,6 +451,6 @@ See `references/extraction-patterns.md` for complete extraction documentation.
 - [TYPO3 Documentation Guide](https://docs.typo3.org/m/typo3/docs-how-to-document/main/en-us/)
 - [RST Syntax Reference](~/.claude/skills/typo3-docs/references/rst-syntax.md)
 - [TYPO3 Directives](~/.claude/skills/typo3-docs/references/typo3-directives.md)
-- [Card Grids & Content Directives](~/.claude/skills/typo3-docs/references/content-directives.md)
-- [Cross-References & Text Roles](~/.claude/skills/typo3-docs/references/text-roles-inline-code.md)
-- [Local Rendering](~/.claude/skills/typo3-docs/references/rendering.md)
+- [Card Grids](~/.claude/skills/typo3-docs/references/card-grids.md)
+- [Cross-References](~/.claude/skills/typo3-docs/references/cross-references.md)
+- [Local Rendering](~/.claude/skills/typo3-docs/references/local-rendering.md)

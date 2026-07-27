@@ -4,191 +4,13 @@
 
 Generate a professional overview page (`index.html`) that serves as the main entry point for the DDEV development environment, providing quick access to all TYPO3 versions and development tools.
 
-## Automatic Branding Detection
+## Branding
 
-**The index page MUST automatically detect and apply appropriate branding:**
+Netresearch branding (colors, fonts, logo, HTML template) is owned by the [`netresearch-branding`](https://github.com/netresearch/netresearch-branding-skill/blob/main/skills/netresearch-branding/SKILL.md) skill — invoke it before generating the index page rather than hardcoding brand facts here. Base the page on its [`templates/landing-page.html`](https://github.com/netresearch/netresearch-branding-skill/blob/main/skills/netresearch-branding/templates/landing-page.html); for extension-specific requirements (icon, `composer.json`/`ext_emconf.php` fields) see its [`references/typo3-extension-branding.md`](https://github.com/netresearch/netresearch-branding-skill/blob/main/skills/netresearch-branding/references/typo3-extension-branding.md).
 
-### Step 1: Detect Available Branding Skills
+**Detection:** Netresearch project if `composer.json` vendor is `netresearch/` or the git remote contains `netresearch`; otherwise fall back to plain TYPO3 orange `#FF8700` with system fonts (no company skill to invoke).
 
-Check for branding skills in this priority order:
-
-1. **Company-specific branding** (e.g., `netresearch-branding`, `company-branding`)
-2. **TYPO3 branding** (fallback - use TYPO3 orange #FF8700)
-3. **Generic clean design** (last resort - neutral colors)
-
-**Detection Method:**
-
-For Claude Code / AI agents, check available skills:
-```bash
-# In Claude Code context
-/sc:help | grep -i branding
-# Or check skill directories
-ls ~/.claude/plugins/cache/*/netresearch-branding/*/SKILL.md 2>/dev/null
-```
-
-For manual detection, check if the project is a Netresearch project:
-```bash
-# Check composer.json vendor
-grep -q '"netresearch/' composer.json && echo "Netresearch project"
-# Check git remote
-git remote -v | grep -q 'netresearch' && echo "Netresearch repo"
-```
-
-### Branding Detection Troubleshooting
-
-**Common Issue: Landing page generated without proper branding**
-
-Symptoms:
-- Generic colors instead of Netresearch turquoise (#2F99A4)
-- Missing logo
-- Wrong fonts (system fonts instead of Raleway/Open Sans)
-- Extension name shows underscores (`nr_llm`) instead of hyphens (`nr-llm`)
-
-**Root Causes and Fixes:**
-
-1. **Branding skill not read** - The agent generated a page without consulting branding references
-   - Fix: Explicitly invoke `netresearch-branding` skill before generating
-   - Fix: Read the branding SKILL.md file for color/font values
-
-2. **Logo not embedded** - The logo SVG wasn't included
-   - Fix: Use the embedded SVG provided in this document (see below)
-   - Fix: Do NOT rely on external logo URLs - embed inline
-
-3. **Wrong extension name format** - Used internal key instead of display name
-   - Fix: Read `composer.json` "name" field for authoritative name
-   - Fix: Use hyphens (`nr-llm`) not underscores (`nr_llm`)
-
-4. **Fallback to generic design** - Branding detection returned false negative
-   - Fix: Check if repo URL or composer vendor contains "netresearch"
-   - Fix: If Netresearch project, ALWAYS apply Netresearch branding
-
-**Verification Checklist:**
-- [ ] Header background is turquoise gradient (#2F99A4 → #247a82)
-- [ ] Logo SVG is embedded (turquoise frame, grey "n")
-- [ ] Headlines use Raleway font
-- [ ] Body uses Open Sans font
-- [ ] Extension name uses hyphens (from composer.json)
-- [ ] Git branch and commit are displayed
-
-### Step 2: Apply Branding Based on Detection
-
-#### If Netresearch Branding Detected
-
-**Invoke:** `netresearch-branding` skill
-
-**Use Template:** `netresearch-branding/assets/landing-page-template.html`
-
-This pre-built template includes:
-- Professional gradient background
-- Card-based layout for quick links
-- Credentials display section
-- Development commands reference
-- GitHub repository link
-- Netresearch footer branding
-
-**Template Variables to Replace:**
-| Variable | Source | Example |
-|----------|--------|---------|
-| `{{EXTENSION_TITLE}}` | Extension name from composer.json | "RTE CKEditor Image" |
-| `{{EXTENSION_DESCRIPTION}}` | composer.json description | "Image support in CKEditor for TYPO3" |
-| `{{DDEV_SITENAME}}` | .ddev/config.yaml name | "rte-ckeditor-image" |
-| `{{GITHUB_URL}}` | composer.json homepage | "https://github.com/netresearch/..." |
-
-**Colors:**
-- Primary: #2F99A4 (Turquoise)
-- Accent: #FF4D00 (Orange)
-- Text: #585961 (Anthracite grey)
-- Background: #FFFFFF (White)
-- Light grey: #CCCDCC
-
-**Typography:**
-- Headlines: `font-family: 'Raleway', sans-serif;` (600/700 weight)
-- Body: `font-family: 'Open Sans', sans-serif;` (400 weight)
-
-**Layout:**
-- Compact header: 20px padding
-- High white space: 40px container padding
-- Card shadows: subtle with turquoise glow on hover
-
-**Official Netresearch Logo SVG:**
-
-The logo MUST be included when Netresearch branding is detected. Embed this SVG directly:
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40">
-  <!-- Turquoise frame -->
-  <rect x="5" y="5" width="90" height="90" rx="8" ry="8"
-        fill="none" stroke="#2999A4" stroke-width="6"/>
-  <!-- Grey "n" letter -->
-  <text x="50" y="72" text-anchor="middle"
-        font-family="Arial, sans-serif" font-size="60" font-weight="bold"
-        fill="#595A62">n</text>
-</svg>
-```
-
-**CSS for logo in header:**
-```css
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.logo svg {
-    flex-shrink: 0;
-}
-.logo-text {
-    font-family: 'Raleway', sans-serif;
-    font-weight: 700;
-    font-size: 1.5rem;
-    color: #2F99A4;
-}
-```
-
-**Complete header example:**
-```html
-<header style="background: linear-gradient(135deg, #2F99A4 0%, #247a82 100%); padding: 20px;">
-    <div class="logo">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40">
-            <rect x="5" y="5" width="90" height="90" rx="8" ry="8"
-                  fill="none" stroke="#ffffff" stroke-width="6"/>
-            <text x="50" y="72" text-anchor="middle"
-                  font-family="Arial, sans-serif" font-size="60" font-weight="bold"
-                  fill="#ffffff">n</text>
-        </svg>
-        <span class="logo-text" style="color: #ffffff;">Extension Name</span>
-    </div>
-</header>
-```
-
-#### If TYPO3 Branding (Fallback)
-
-**Colors:**
-- Primary: #FF8700 (TYPO3 Orange)
-- Secondary: #000000 (Black)
-- Text: #333333 (Dark grey)
-- Background: #F8F9FA (Light grey)
-- Cards: #FFFFFF (White)
-
-**Typography:**
-- System fonts: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
-- No external font imports
-
-**Layout:**
-- Standard header: 40px padding
-- Moderate white space: 30px container padding
-- Card shadows: standard grey shadows
-
-#### If No Branding (Generic)
-
-**Colors:**
-- Primary: #0066CC (Professional blue)
-- Text: #333333
-- Background: #FFFFFF
-- Cards: #F5F5F5
-
-**Typography:**
-- System fonts only
-- Standard sizing
+**Known failure mode:** an agent generates the page without invoking `netresearch-branding` first, producing generic colors/system fonts, an externally-linked (not embedded) logo, or an extension name with underscores instead of the composer-name's hyphens. Fix: explicitly invoke `netresearch-branding` before generating, embed its logo SVG inline (never link it externally), and read the extension name from `composer.json` `name`.
 
 ## HTML Template Structure
 
@@ -229,16 +51,7 @@ The logo MUST be included when Netresearch branding is detected. Embed this SVG 
 
 ## Generation Workflow
 
-### Step 1: Detect Branding
-
-```
-1. Check for branding skills
-2. If netresearch-branding exists → Use Netresearch colors/fonts
-3. Else if project has branding config → Use project branding
-4. Else → Use TYPO3 branding (fallback)
-```
-
-### Step 2: Extract Project Metadata
+### Step 1: Extract Project Metadata
 
 ```
 - Project name (from .ddev/config.yaml or composer.json)
@@ -246,7 +59,7 @@ The logo MUST be included when Netresearch branding is detected. Embed this SVG 
 - Configured TYPO3 versions (from docker-compose or config)
 ```
 
-### Step 3: Generate HTML
+### Step 2: Generate HTML
 
 **File location:** `.ddev/web-build/index.html`
 
@@ -259,85 +72,11 @@ The logo MUST be included when Netresearch branding is detected. Embed this SVG 
 - `{{FONT_HEADLINE}}` - Headline font family
 - `{{FONT_BODY}}` - Body font family
 
-### Step 4: Copy to Web Root
+### Step 3: Copy to Web Root
 
 ```bash
 # After generation
-ddev exec cp /var/www/hello_world/.ddev/web-build/index.html /var/www/html/
-```
-
-## Example: Netresearch-Branded Index
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{PROJECT_NAME}} - Development Environment</title>
-    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Open+Sans:wght@400&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Open Sans', sans-serif;
-            background: #FFFFFF;
-            color: #585961;
-        }
-        .header {
-            background: #2F99A4;
-            padding: 20px;
-        }
-        .header h1 {
-            font-family: 'Raleway', sans-serif;
-            color: #FFFFFF;
-            font-size: 24px;
-        }
-        .card-links a:hover {
-            background: #2F99A4;
-            color: #FFFFFF;
-        }
-    </style>
-</head>
-<body>
-    <!-- Content here -->
-</body>
-</html>
-```
-
-## Example: TYPO3-Branded Index (Fallback)
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{PROJECT_NAME}} - Development Environment</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #F8F9FA;
-            color: #333333;
-        }
-        .header {
-            background: #FF8700;
-            padding: 40px 20px;
-        }
-        .header h1 {
-            color: #FFFFFF;
-            font-size: 32px;
-        }
-        .card-links a {
-            color: #FF8700;
-        }
-        .card-links a:hover {
-            background: #FF8700;
-            color: #FFFFFF;
-        }
-    </style>
-</head>
-<body>
-    <!-- Content here -->
-</body>
-</html>
+ddev exec cp /var/www/html/.ddev/web-build/index.html /var/www/html/
 ```
 
 ## Responsive Design Requirements
@@ -470,7 +209,6 @@ $description = $composerJson['description'] ?? '';
 <head>
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($extensionName) ?></title>
-    <!-- Apply branding per detection logic -->
 </head>
 <body>
     <header>
@@ -487,9 +225,7 @@ $description = $composerJson['description'] ?? '';
 
 Before finalizing the index page:
 
-- [ ] Branding detection executed correctly
-- [ ] Appropriate colors applied
-- [ ] Proper fonts loaded (if external fonts used)
+- [ ] `netresearch-branding` invoked (or fallback applied) per the Branding section above
 - [ ] All TYPO3 version links present
 - [ ] Backend credentials displayed
 - [ ] **Git branch and commit displayed**
@@ -499,90 +235,3 @@ Before finalizing the index page:
 - [ ] No console errors
 - [ ] File copied to /var/www/html/ (or public/index.php for single-extension)
 - [ ] Accessible at https://{sitename}.ddev.site/
-
-## Integration with SKILL.md
-
-**In Step 8 of SKILL.md, replace the current text with:**
-
-```markdown
-### Step 8: Generate Project Overview Page
-
-**Automatic branding detection:**
-
-The overview page automatically detects and applies appropriate branding:
-
-1. **Check for branding skills** (netresearch-branding, company-branding, etc.)
-2. **Apply detected branding** (colors, fonts, layout)
-3. **Fallback to TYPO3 branding** (orange #FF8700) if no branding detected
-4. **Generate responsive HTML** with cards for each TYPO3 version
-
-**Generation process:**
-
-```bash
-# Skill automatically:
-# 1. Detects available branding (netresearch-branding skill if present)
-# 2. Applies brand colors and fonts
-# 3. Creates .ddev/web-build/index.html
-# 4. Copies to /var/www/html/
-
-# Manual copy if needed:
-ddev exec cp /var/www/hello_world/.ddev/web-build/index.html /var/www/html/
-```
-
-**See:** `INDEX-PAGE-GENERATION.md` for complete branding detection logic
-```
-
-## Example Detection Logic (Pseudocode)
-
-```python
-def generate_index_page():
-    # Step 1: Detect branding
-    branding = detect_branding()
-    
-    if branding == "netresearch":
-        colors = {
-            "primary": "#2F99A4",
-            "text": "#585961",
-            "background": "#FFFFFF"
-        }
-        fonts = {
-            "headline": "Raleway",
-            "body": "Open Sans"
-        }
-        header_padding = "20px"
-        
-    elif branding == "company-specific":
-        # Load company branding
-        colors = load_company_colors()
-        fonts = load_company_fonts()
-        
-    else:  # TYPO3 fallback
-        colors = {
-            "primary": "#FF8700",
-            "text": "#333333",
-            "background": "#F8F9FA"
-        }
-        fonts = {
-            "headline": "system-ui",
-            "body": "system-ui"
-        }
-        header_padding = "40px"
-    
-    # Step 2: Generate HTML
-    html = generate_html_template(colors, fonts, header_padding)
-    
-    # Step 3: Write file
-    write_file(".ddev/web-build/index.html", html)
-    
-    # Step 4: Copy to web root
-    copy_to_web_root()
-```
-
----
-
-**This approach ensures:**
-- ✅ Automatic branding application
-- ✅ Consistent professional appearance
-- ✅ Graceful fallback to TYPO3 branding
-- ✅ Company branding when available
-- ✅ No manual branding decisions needed

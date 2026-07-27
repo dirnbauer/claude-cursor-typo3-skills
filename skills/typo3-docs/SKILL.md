@@ -67,7 +67,7 @@ verify API signatures match. See `references/extraction-patterns.md`.
 - `references/file-structure.md` -- directory layout, naming conventions
 - `references/guides-xml.md` -- build configuration, interlink settings
 - `references/coding-guidelines.md` -- .editorconfig, indentation rules
-- `references/rst-syntax.md` -- headings, lists, tables, formatting
+- `references/rst-syntax.md` -- headings, list punctuation, doc-review pitfalls
 - `references/text-roles-inline-code.md` -- `:php:`, `:file:`, `:guilabel:`, `:ref:`
 - `references/code-structure-elements.md` -- code blocks, confval, PHP domain
 - `references/typo3-directives.md` -- confval, versionadded, deprecated

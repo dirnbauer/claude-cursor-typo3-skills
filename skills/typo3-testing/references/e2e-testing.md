@@ -281,30 +281,6 @@ test.describe('My Extension Backend Module', () => {
 });
 ```
 
-### Common Actions
-
-```typescript
-// Navigation
-await page.goto('/module/web/layout');
-await page.goBack();
-
-// Form interaction
-await page.getByLabel('Title').fill('Value');
-await page.getByRole('button', { name: 'Save' }).click();
-await page.getByRole('combobox').selectOption('option-value');
-await page.getByRole('checkbox').check();
-
-// Assertions
-await expect(page.locator('.success')).toBeVisible();
-await expect(page.locator('h1')).toContainText('Title');
-await expect(page).toHaveURL(/module\/web\/layout/);
-
-// Waiting
-await page.waitForLoadState('networkidle');
-await page.waitForSelector('.loaded');
-await page.waitForResponse(/api\/endpoint/);
-```
-
 ## Running Tests
 
 ```bash
@@ -537,24 +513,6 @@ export default defineConfig({
 **Local development:** `npx playwright test` (uses DDEV default)
 **CI:** Sets `TYPO3_BASE_URL=http://localhost:8080`
 
-## Best Practices
-
-**Do:**
-- Use Page Object Model (fixtures) for reusability
-- Store authentication state to avoid repeated logins
-- Test user-visible behavior, not implementation details
-- Use descriptive test names that explain the scenario
-- Wait for specific elements, not arbitrary timeouts
-- Use `data-testid` attributes for stable selectors
-- Run tests in CI with proper environment setup
-
-**Don't:**
-- Use `page.waitForTimeout()` - use specific waits instead
-- Depend on CSS classes that may change
-- Test internal TYPO3 Core behavior
-- Ignore flaky tests - fix the root cause
-- Use hard-coded credentials in code (use env vars)
-
 ## Naming Conventions
 
 - Pattern: `<feature>.spec.ts`
@@ -562,28 +520,6 @@ export default defineConfig({
 - Location: `Build/tests/playwright/e2e/<category>/`
 
 ## Common Pitfalls
-
-**No Waits for Dynamic Content**
-```typescript
-// Wrong
-await page.click('Load More');
-await expect(page.locator('.item')).toBeVisible(); // May fail
-
-// Right
-await page.click('Load More');
-await page.waitForSelector('.item:nth-child(11)');
-await expect(page.locator('.item')).toBeVisible();
-```
-
-**Brittle Selectors**
-```typescript
-// Wrong - fragile CSS path
-await page.click('div.container > div:nth-child(3) > button');
-
-// Right - stable selector
-await page.click('[data-testid="add-to-cart"]');
-await page.click('#product-add-button');
-```
 
 **Backend module DOM lives in an iframe — `page.locator` can't see it**
 

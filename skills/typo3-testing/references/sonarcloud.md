@@ -78,6 +78,35 @@ GitHub Checks **annotation**, *regardless* of whether the Quality Gate passes. A
 (its configured new-code conditions) is the merge bar; non-gate code-smell annotations
 do not block a merge. Don't treat a passing-gate-with-annotations PR as "broken".
 
+## Don't SAST-edit template-synced files (exclude them instead)
+
+`Build/Scripts/runTests.sh` — and the other files an extension syncs from this
+`typo3-testing` skill's `assets/` (the test-runner template, `Build/playwright/**`,
+PHPUnit/PHPStan/rector configs) — are **upstream-owned template files**. A downstream
+extension should **never** apply cosmetic SonarCloud/static-analysis fixes to them in
+place (e.g. `php:S100`/shell-naming renames, `S7684`, variable-style tweaks). Such edits
+diverge the local copy from this template and cause drift and merge conflicts on the next
+template sync — for a finding that was never the downstream repo's to fix.
+
+Instead, **exclude template-synced paths from analysis** so the findings never reach the
+PR in the first place:
+
+```properties
+# Automatic Analysis → .sonarcloud.properties
+# CI-based analysis  → sonar-project.properties
+sonar.exclusions=**/Build/Scripts/runTests.sh,**/Build/playwright/**
+
+# Or scope-suppress specific rules on the synced file rather than rewriting it:
+sonar.issue.ignore.multicriteria=e1
+sonar.issue.ignore.multicriteria.e1.ruleKey=php:S100
+sonar.issue.ignore.multicriteria.e1.resourceKey=**/Build/Scripts/runTests.sh
+```
+
+Fix the finding **upstream** in this skill's `assets/` template if it is genuinely worth
+fixing, then re-sync — that keeps every downstream copy identical. (Real instance: a
+2026-06-27 SonarCloud sweep renamed shell functions in a downstream `runTests.sh`,
+diverging it from this template.)
+
 ## Quick Start
 
 ### 1. Sign Up
@@ -330,6 +359,45 @@ SonarCloud imports PHPStan issues and displays them alongside its own analysis.
 1. Go to SonarCloud → Your Project → Project Settings → Quality Gates
 2. Create new gate or copy "Sonar Way"
 3. Adjust thresholds for TYPO3 requirements
+
+### Gotchas: new-code duplication and coverage pull against each other
+
+- **"New-code duplication" counts pre-existing duplication on lines you touch.**
+  A mechanical sweep that edits many lines (e.g. converting `createMock()` → `createStub()`
+  across the test suite) makes SonarCloud attribute the *surrounding* duplicated test
+  scaffolding to the PR as "new code", so a green project can suddenly fail
+  `new_duplicated_lines_density`. Fix it by factoring the repeated setup (mock wiring,
+  fixtures) into private helpers — not by reverting the original change.
+- **De-duplicating tests can drop the coverage gate — but only when it removes exercised
+  paths.** *Pure* extraction of shared mock setup into helpers/traits does NOT change
+  coverage: test files are excluded from coverage metrics and the same production lines
+  still run. Coverage drops when the consolidation also *merges distinct scenarios* (so a
+  production branch is no longer exercised in any test) or *deletes* redundant test cases.
+  The local gate is usually *unit*-only (`phpunit -c Build/phpunit/UnitTests.xml`), so
+  re-check it after a dedup sweep and recover by adding unit tests for methods previously
+  only *functionally* covered (e.g. thin repository wrappers) — don't lower the gate.
+- **Locate the duplicated blocks instead of guessing.** The gate reports a percentage, not
+  a location. Ask the API which line ranges are duplicated, then dedupe exactly those:
+
+  ```bash
+  curl -s "https://sonarcloud.io/api/duplications/show?key=ORG_PROJECT%3Apath/to/File.php&pullRequest=PR" \
+    | jq '.duplications[].blocks | map("\(.from)-\(.from + .size - 1)")'
+  ```
+
+  Blocks repeated 6–10× across a test family are common; the few lines you added inside one
+  of them are what the gate attributes to your PR.
+- **Fixing the gate once does not keep it fixed.** As long as the surrounding blocks stay
+  duplicated, the *next* commit that adds a line inside them trips the gate again — the
+  percentage is recomputed per push against the new code of that push. Dedupe the region
+  rather than trimming your addition, and re-read the gate after every subsequent push
+  instead of assuming the earlier fix still holds.
+- **The dedup fix trades duplication for other smells — check for them in the same pass.**
+  Collapsing 6–10 repeated arrangements into one helper concentrates every varying value
+  into its signature, which reliably produces `php:S107` (more than 7 parameters) and
+  `php:S3776` (cognitive complexity above 15). Both are MAJOR code smells that pass the
+  gate but ship in the diff. Keep the helper at ≤7 parameters — group rarely-used trailing
+  arguments into one options array, and drop any parameter another already determines —
+  and move branching out of the helper body into small private methods.
 
 ## PR Decoration
 

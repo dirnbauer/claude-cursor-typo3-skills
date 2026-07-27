@@ -290,9 +290,8 @@ setup_typo3() {
 
     print_step "Creating installation trigger files..."
     ddev exec 'touch /var/www/html/FIRST_INSTALL'
-    ddev exec 'mkdir -p /var/www/html/var/transient'
-    ddev exec 'touch /var/www/html/var/transient/ENABLE_INSTALL_TOOL'
-    ddev exec 'echo "KEEP_FILE" > /var/www/html/var/transient/ENABLE_INSTALL_TOOL'
+    ddev exec 'touch /var/www/html/typo3conf/ENABLE_INSTALL_TOOL'
+    ddev exec 'echo "KEEP_FILE" > /var/www/html/typo3conf/ENABLE_INSTALL_TOOL'
     print_success "Trigger files created"
 
     print_step "Running TYPO3 setup..."

@@ -188,7 +188,7 @@ The table above is the index. The sections below expand the entries that have su
 
 ### `LoginProviderInterface::modifyView()` — added in v14, two pitfalls
 
-v14 added `modifyView(ServerRequestInterface $request, ViewInterface $view): string` alongside `render()`. Two things bite:
+v14 added `modifyView(ViewInterface $view, ServerRequestInterface $request): void` alongside `render()`. Two things bite:
 
 **1. The implementation must exist on v14, even if unused on v13.** Implementations conditional on a `class_exists()` check are too late — the interface contract is checked at class-load time. Just add the method and accept that v13 ignores it.
 

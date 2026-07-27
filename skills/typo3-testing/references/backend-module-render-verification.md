@@ -16,7 +16,7 @@ Two real failure modes that no static gate catches:
 | Wrong ViewHelper namespace | **Whole module 500s** (parse-time, before any output) | e.g. `<be:infobox>` instead of `<f:be.infobox>` — an unregistered namespace prefix is a template **parse** error, not a runtime one, so it takes down the entire view |
 | Unbounded chart/canvas | Page balloons (a `<canvas>` grew to 6543px tall) | Chart.js (or similar) with `maintainAspectRatio: false` inside a container that has no fixed height — the canvas keeps growing every reflow |
 
-## Verify the render — two complementary layers
+## Verify the render — three complementary layers
 
 ### 1. StandaloneView (functional, no browser)
 
@@ -28,7 +28,46 @@ Limitation: it does **not** reproduce the `ModuleTemplate` / backend doc-header
 context, asset inclusion (CSS/JS), or browser layout — so it cannot catch the
 canvas-height trap or a CSS/JS load-order problem.
 
-### 2. Live render (browser)
+### 2. Render-action functional test (automated, CI-able)
+
+Between StandaloneView and a live browser sits a layer that renders the WHOLE
+action — controller, `ModuleTemplateFactory`, Fluid template, doc-header
+buttons — inside a functional test. Construct the controller from real
+container services and set only the Extbase request by reflection:
+
+```php
+$controller = new TaskListController(
+    $this->get(ModuleTemplateFactory::class),
+    $this->get(IconFactory::class),
+    $this->get(TaskRepository::class),
+    $this->get(BackendUriBuilder::class),
+    $this->get(UsageAnalyticsServiceInterface::class),
+);
+// Backend request: applicationType BE + backend Route (packageName resolves
+// the template root paths) + extbase params + normalizedParams; assign it to
+// $GLOBALS['TYPO3_REQUEST'] and reflection-set the controller's $request.
+$this->setPrivateProperty($controller, 'request', $this->createBackendRequest());
+
+$response = $controller->listAction();
+self::assertSame(200, $response->getStatusCode());
+self::assertStringContainsString('Test Manual Task', (string)$response->getBody());
+```
+
+Also set up a backend admin (`setUpBackendUser(1)`) and `$GLOBALS['LANG']` via
+`LanguageServiceFactory::createFromUserPreferences()` — `LocalizationUtility`
+and flash queues need them. Unset `BE_USER`/`TYPO3_REQUEST`/`LANG` in `tearDown()`.
+
+Traps this layer has hit in practice:
+
+| Trap | Symptom | Rule |
+|------|---------|------|
+| Asserting the route *identifier* | `record_edit` never appears in markup | Backend URLs render the route **path** — assert `record/edit` |
+| Guard-path redirects via Extbase `uriFor()` | `location` header is `''` in the harness | The module router isn't fully wired; assert `RedirectResponse` + a non-empty flash-message queue instead of the URL string |
+| Service that degrades instead of throwing | Error-path test gets a 200 preview | Read the service first — e.g. a wizard `generateTask()` that falls back to a canned result never reaches the controller's catch; test the fallback render |
+| `final` constructor dependency | `createMock()` impossible in a unit test | That class is functional-test territory by construction — don't fight it with reflection hacks |
+| PHPUnit ≥ 12 mock notices | "No expectations were configured…" per test | Use `self::createStub()` when only return values matter |
+
+### 3. Live render (browser)
 
 For anything with layout, charts, JS modules, or `ModuleTemplate` chrome, open the
 module in a running backend (a live render is a browser/manual step, **not** an
