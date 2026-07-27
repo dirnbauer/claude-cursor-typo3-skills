@@ -658,7 +658,7 @@ TYPO3 backend Lit reference material for the `typo3-webcomponents` skill.
 - **typo3-initial-release**: First official TYPO3 14.3+ extension release workflow with Composer metadata, CI/tooling, final review, and tagging gates
 - **typo3-rector**: Automated code refactoring with Rector for TYPO3 v14
 - **typo3-update**: Version migration and compatibility strategies for TYPO3 v14
-- **typo3-14-update**: End-to-end v14.3-only upgrade orchestration inside local DDEV — visual regression main loop with pre-update sitemap and accessibility gates, strategy for all extensions (Packagist, local packages/, forks, uninstall checks), upgrade wizards, workspaces, plain Vite build, Solr/Visual Editor/RTE/security-header feature upgrades, Lighthouse sampling, webconsulting-CI Word KPI report; never deploys to live
+- **typo3-14-update**: End-to-end v14.3-only upgrade orchestration inside local DDEV — visual regression main loop with pre-update sitemap, Bootstrap 5 and accessibility gates, strategy for all extensions (Packagist, local packages/, forks, uninstall checks), upgrade wizards, workspaces, plain Vite build, Solr/Visual Editor/RTE/security-header feature upgrades, Lighthouse sampling, webconsulting-CI Word KPI report; never deploys to live
 - **typo3-extension-upgrade**: Systematic extension upgrades with Rector, Fractor, PHPStan
 - **typo3-fractor**: Automated non-PHP migrations (FlexForm, TypoScript, Fluid, YAML, XLIFF, Htaccess)
 - **typo3-icon14**: Migrate extension icons from solid-background to v14 line-art style (currentColor, CSS custom properties)
