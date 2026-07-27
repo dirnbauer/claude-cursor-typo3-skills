@@ -2398,6 +2398,7 @@ grep -r "DataHandler" skills/
 | `context7` | Library documentation lookup via REST API | Netresearch |
 | `firecrawl` | Firecrawl CLI for web scraping, search, and research | Firecrawl |
 | `skill-creator` | Guide for creating and packaging Agent Skills | Anthropic |
+| `redmine-agent-ready-tickets` | Rewrite Redmine issues into implementation contracts an agent can execute | Matt Pocock |
 | **Database** | | |
 | `postgres-best-practices` | Postgres performance, RLS, indexes, pooling | Supabase |
 | **Marketing** | | |
