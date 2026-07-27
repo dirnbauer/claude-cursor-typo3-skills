@@ -21,7 +21,7 @@ Decorative borders and rounded cards are legacy styling.
 When references disagree, use this order:
 
 1. The current invoice UI for dense information, forms, tables, and document hierarchy.
-2. Current internal products such as `track.webconsulting.at` and the GitLab theme.
+2. Current internal products such as the project tracker and the GitLab theme.
 3. The current public `webconsulting.at` site for editorial layout, marketing pages, and large-scale composition.
 4. This skill for reusable tokens and implementation rules.
 

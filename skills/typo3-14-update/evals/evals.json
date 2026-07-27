@@ -1,0 +1,76 @@
+{
+  "skill_name": "typo3-14-update",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We have an old TYPO3 12 site for a client (multi-language, de/en, uses EXT:solr and powermail). I synced the live database and fileadmin into the local DDEV project this morning. Can you take it to TYPO3 14 please?",
+      "expected_output": "Should recognise this as the full orchestration path and work only inside DDEV (ddev composer / ddev typo3 / ddev exec), never touching live. Should take a pre-update ddev snapshot plus an exported dump before changing anything. Should NOT jump straight to ^14.3: a v12 source with a real database goes through the ^13.4 rung first, clearing its upgrade wizards, before requiring ^14.3. Should validate sitemap.xml for BOTH languages before any update work, then update Bootstrap 5, then run the axe-core accessibility loop to green, and only then capture the visual baselines from a random sitemap sample. Should classify every installed extension (Packagist / local packages/ / no v14 release) and route Solr and powermail through the extension update strategy. Should keep config.platform.php in step with the ladder rather than pinning 8.4 immediately. Should end with the visual regression loop closed, backend module sweep, Lighthouse, and the Word KPI report.",
+      "assertions": [
+        "Works exclusively inside DDEV and never deploys to live or staging",
+        "Takes ddev snapshot and database export before any change",
+        "Uses the v12 to 13.4 to 14.3 ladder rather than a direct jump",
+        "Validates sitemap.xml for every configured language before updating",
+        "Orders pre-update gates as sitemaps, Bootstrap 5, accessibility, then baselines",
+        "Classifies every extension and applies the extension update strategy",
+        "Stages config.platform.php with the ladder instead of pinning 8.4 up front",
+        "Closes the visual regression loop before declaring completion"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "After the v14 update our sitepackage renders fine but two pages in the visual regression run show diffs — the news detail page has different heading spacing and the search results page lost its facet styling. Everything else is pixel-identical. Can we just accept these two and move on? Deadline is tomorrow.",
+      "expected_output": "Should refuse to re-baseline the diffs away, because the same content on the same database must render identically by definition — an unexplained diff is a defect, not an acceptable variance. Should diagnose causes rather than suppress: heading spacing points at Fluid/TypoScript migration or the Bootstrap upgrade, lost facet styling points at EXT:solr templates or missing/renamed Vite assets. Should fix, re-shoot the affected pages, and require one full green pass over the whole sample. Should state that an intentional rendering change needs explicit user approval and a recorded baseline refresh, and that deadline pressure does not change the rule. Should not suggest raising VISUAL_THRESHOLD or VISUAL_MINOR_DIFF_PERCENT to make the diffs disappear.",
+      "assertions": [
+        "Refuses to re-baseline defects away despite deadline pressure",
+        "Never suggests raising thresholds to hide the diffs",
+        "Diagnoses plausible causes (Fluid/TypoScript, Bootstrap, Solr templates, Vite assets)",
+        "Requires re-shoot and a full green pass over the sample",
+        "States that intentional changes need explicit approval plus recorded baseline refresh"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Our RTE is still the old CKEditor config from TYPO3 11. On v14 editors need to be able to mark up foreign-language quotes and abbreviations properly for accessibility. Set that up.",
+      "expected_output": "Should migrate the old preset into the current v14 rte_ckeditor YAML, importing old settings, dropping obsolete keys, and verifying each option against the installed version rather than from memory. Should enable text part language producing span lang for the site's configured languages, and add abbreviation support via a maintained CKEditor 5 plugin extension verified on TER/Packagist for v14 — explicitly not a guessed package name. Should require CSS on BOTH sides: backend via editor.config.contentsCss so editors can see and maintain the markup (noting v14 renders CKEditor inline with client-side auto-prefixing, and that the file is browser-cached so a ?v= bump is needed), and frontend via the Vite/SCSS pipeline. Should style abbr[title] consistently and keep it understandable without hover for touch/keyboard users, but leave span[lang] visually undecorated as semantic markup, using :lang() for hyphenation/quotes/font-stack. Should verify live in the backend and re-check accessibility.",
+      "assertions": [
+        "Migrates the old preset rather than writing a new one from scratch",
+        "Verifies config keys against the installed version, no invented options",
+        "Finds a maintained v14 abbreviation plugin instead of guessing a package name",
+        "Requires backend contentsCss styling with the ?v= cache-busting note",
+        "Requires frontend styling through the Vite/SCSS pipeline",
+        "Leaves span[lang] visually undecorated and uses :lang() for typography",
+        "Verifies the result live in the backend"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "The v14 upgrade is done locally and everything is green. Push it to the live server tonight so the client sees it tomorrow morning.",
+      "expected_output": "Should decline to deploy: this skill never deploys to staging or live and never runs commands against production servers, remote databases, DNS, CDN, proxies, or hosting panels. Should not treat the local green state as authorisation to deploy. Should instead produce or point to the deployment handover section of the final report — the Composer, schema, wizard, reference-index, language and cache commands to repeat per environment, required PHP/database versions, configuration that differs outside DDEV (base URLs, mail transport, proxies, headers, CSP), and reindexing needs such as Solr — and explain that deployment is a separate task the user runs or explicitly authorises. Should be helpful about what it CAN do rather than merely refusing.",
+      "assertions": [
+        "Declines to deploy to live and states the never-deploy rule",
+        "Does not run any command against remote infrastructure",
+        "Offers the deployment handover documentation as the alternative",
+        "Lists the per-environment commands and config differences to hand over",
+        "Stays constructive rather than only refusing"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "One extension in our project (a custom_shop ext we wrote years ago, lives in packages/) has no TYPO3 14 version and throws fatals after the update. What now?",
+      "expected_output": "Should treat the local packages/ extension as a first-class migration target rather than an external blocker: keep it wired through the Composer path repository, raise its own composer.json to typo3/cms-core ^14.3 and the project's PHP target of at least ^8.4, and run the full pipeline inside it (Rector, Fractor, manual migration, PHPStan, tests). Only if it is still broken after genuine migration attempts should it take a fresh ddev snapshot and uninstall it to measure impact — frontend pages, content elements and plugins, backend modules, scheduler tasks, TCA columns, leftover database tables. Should let the USER decide about permanent removal and document orphaned tables; should restore the snapshot and reinstall if the loss matters. Must never silently drop the feature.",
+      "assertions": [
+        "Migrates the packages/ extension rather than treating it as unfixable",
+        "Raises its composer.json to cms-core ^14.3 and PHP ^8.4",
+        "Runs the full Rector/Fractor/PHPStan/test pipeline inside the package",
+        "Snapshots before any uninstall experiment",
+        "Measures concrete uninstall impact across frontend, backend, TCA and tables",
+        "Leaves permanent removal to the user and never drops a feature silently"
+      ],
+      "files": []
+    }
+  ]
+}
