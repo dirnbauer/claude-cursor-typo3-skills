@@ -1,5 +1,11 @@
 # webconsulting Agent Skills
 
+> ## 📦 This repository is archived
+>
+> **TYPO3 work has moved to [dirnbauer/typo3-skills](https://github.com/dirnbauer/typo3-skills)** — 26 owned + 11 vendored TYPO3 v14 skills with a measured eval harness and a single gate command. The TYPO3 updater there (`typo3-upgrade-run`) supersedes `typo3-14-update` in this repository: it proves the update changed nothing for visitors, with a sealed baseline, a determinism self-test, and a real exit-code contract.
+>
+> Everything here stays readable and installable — this repository is simply no longer updated. The ~105 non-TYPO3 skills (marketing, design, and general tooling) remain available at the state of the final commit.
+
 > **TYPO3 skills:** Guidance here primarily targets **TYPO3 v14.x**. `typo3-translations` also covers TYPO3 13 compatibility where translation format choices affect upgrades. These skills **will change** as v14 evolves — **through and after** the v14 LTS release. Always verify third-party extensions on Packagist (`require.typo3/cms-core`) for your project.
 
 A curated collection of **137 Agent Skills** from **webconsulting** for AI-augmented software development. Some skills are built in-house, others are carefully imported, adapted, and maintained from strong open-source foundations. Together they give your AI coding assistant a practical, production-focused toolkit for TYPO3, frontend work, security, legal compliance, video, documentation, and enterprise engineering.
